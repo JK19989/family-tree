@@ -1,0 +1,132 @@
+/* 基本樣式 */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+/* 登入容器 */
+.login-container {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.login-container h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.login-container p {
+    color: #666;
+    margin-bottom: 25px;
+}
+
+/* 輸入框群組 */
+.input-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+    font-size: 16px;
+}
+
+/* 登入按鈕 */
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.btn-login:hover {
+    background-color: #0056b3;
+}
+
+/* 訪客連結 */
+.guest-login {
+    margin-top: 20px;
+}
+
+.guest-login a {
+    color: #007bff;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.guest-login a:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* 錯誤訊息 */
+.error-message {
+    color: #dc3545;
+    margin-top: 15px;
+    min-height: 1.2em;
+}
+/* 【新增】歷史紀錄上一步/下一步按鈕樣式 */
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.history-nav-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.history-nav-btn {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+    cursor: pointer;
+    color: #555;
+    transition: background-color 0.2s, color 0.2s;
+    line-height: 28px; /* 微調讓箭頭置中 */
+}
+
+.history-nav-btn:hover {
+    background-color: #e0e0e0;
+    color: #000;
+}
+
+.history-nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+}

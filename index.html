@@ -1,0 +1,2662 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>李氏家族 多功能家譜</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"/>
+<style>
+    :root {
+        --male-border: #357ABD; --female-border: #E65F9E; --unknown-border: #cccccc;
+        --line-color: #dcdcdc; --text-color: #333; --spouse-color: #5a8a62;
+        --deceased-bg: #f5f5f5; --deceased-color: #888;
+        --button-bg: #e9ecef; --button-hover-bg: #ced4da;
+        --primary-action-color: #007bff; --danger-action-color: #dc3545;
+        --worship-bg: #fdf8e1;
+        --btn-major-bg: #fff;
+        --btn-major-border: #adb5bd;
+        --btn-major-hover-bg: #f8f9fa;
+        --btn-editor-bg: #6c757d;
+        --btn-editor-border: #5a6268;
+        --btn-editor-hover-bg: #5a6268;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f8f9fa; line-height: 1.6; padding: 20px; color: var(--text-color); }
+    .header-controls { text-align: center; margin-bottom: 10px; padding: 10px; background-color: #f0fff0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .user-status-section, .filter-zoom-section, .zoom-section { margin-bottom: 10px; }
+    .header-btn { padding: 8px 15px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; border-radius: 5px; background-color: white; margin: 0 5px; white-space: nowrap; }
+    .header-btn.small-blue { background-color: var(--primary-action-color); color: white; padding: 5px 10px; font-size: 14px; border-color: var(--primary-action-color); }
+    .header-btn.small-red { background-color: var(--danger-action-color); color: white; padding: 5px 10px; font-size: 14px; border-color: var(--danger-action-color); }
+    /* 需求 #2: 按鈕美化並縮小 */
+    .header-btn-major, .header-btn-editor {
+        padding: 6px 12px;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.07);
+        transition: all 0.2s ease-in-out;
+    }
+    .header-btn-major {
+        background-color: var(--btn-major-bg);
+        border: 1px solid var(--btn-major-border);
+    }
+    .header-btn-major:hover {
+        background-color: var(--btn-major-hover-bg);
+        border-color: #777;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .header-btn-editor {
+        background-color: var(--btn-editor-bg);
+        color: white;
+        border: 1px solid var(--btn-editor-border);
+    }
+    .header-btn-editor:hover {
+        background-color: #5a6268;
+        border-color: #495057;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    #status-indicator { font-weight: bold; }
+    #status-indicator.visitor { color: #6c757d; }
+    #status-indicator.editor { color: #28a745; }
+    h1, h3 { text-align: center; color: #2c3e50; margin-top: 0; }
+    .tree-container { display: flex; justify-content: flex-start; margin-top: 20px; overflow-x: auto; padding: 20px; border: 1px solid #ddd; background-color: #fffff0; scroll-behavior: smooth; }
+    .tree { transform-origin: top left; transition: transform 0.3s ease-in-out; }
+    .tree ul { padding-top: 45px; position: relative; display: flex; justify-content: center; align-items: flex-start; }
+    .tree li { display: flex; flex-direction: column; align-items: center; list-style-type: none; position: relative; padding: 30px 15px 0 15px; }
+    .family-group { display: flex; align-items: center; position: relative; padding-bottom: 25px; }
+    .family-group::before { content: ''; position: absolute; top: 50%; left: 10px; right: 10px; border-top: 2px solid var(--line-color); z-index: 0; }
+    .tree li::before, .tree li::after { content: ''; position: absolute; top: 15px; right: 50%; border-top: 2px solid var(--line-color); width: 50%; height: 30px; }
+    .tree li::after { right: auto; left: 50%; border-left: 2px solid var(--line-color); }
+    .tree li:only-child::after, .tree li:only-child::before { display: none; }
+    .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+    .tree li:last-child::before { border-right: 2px solid var(--line-color); border-radius: 0 5px 0 0; }
+    .tree li:first-child::after { border-radius: 5px 0 0 0; }
+    .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid var(--line-color); width: 0; height: 30px; }
+    .node { margin: 0 10px; padding: 8px 12px; color: var(--text-color); background-color: #fff; font-size: 14px; display: inline-block; border-radius: 8px; min-width: 140px; border: 2px solid; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; z-index: 1; transition: box-shadow 0.3s, transform 0.3s; }
+    .node.highlight { box-shadow: 0 0 15px 5px rgba(0, 123, 255, 0.7); transform: scale(1.05); }
+    .node.male { border-color: var(--male-border); } .node.female { border-color: var(--female-border); } .node.unknown { border-color: var(--unknown-border); }
+    .node.deceased { background-color: var(--deceased-bg); color: var(--deceased-color); }
+    .node-main { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .node .info-area { cursor: pointer; margin-bottom: 8px; }
+    .node .name { font-weight: bold; }
+    .node .gender-icon { margin-right: 5px; font-weight: 900; }
+    .node.male .gender-icon { color: var(--male-border); }
+    .node.female .gender-icon { color: var(--female-border); }
+    .node-buttons { display: flex; align-items: center; justify-content: center; }
+    .node-btn { font-family: sans-serif; font-size: 16px; font-weight: bold; width: 24px; height: 24px; line-height: 22px; border-radius: 50%; border: 1px solid #ccc; background-color: var(--button-bg); cursor: pointer; margin-left: 4px; transition: background-color 0.2s, transform 0.1s ease; }
+    .node-btn:hover { background-color: var(--button-hover-bg); }
+    /* 需求 #4: +/- 按鈕還原舊版樣式 */
+    .li-toggle-btn { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); z-index: 5; width: 44px; height: 44px; line-height: 42px; padding: 0; background-color: rgba(255, 255, 255, 0.5); border-radius: 50%; }
+    .toggle-btn { color: #3498db; } .add-btn { color: #28a745; } .edit-btn { color: #ffc107; } .delete-btn { color: var(--danger-action-color); } .add-spouse-node-btn { color: #fd7e14; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); animation: fadeIn 0.3s; }
+    .modal-content { background-color: #fefefe; margin: 5% auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 550px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; } .close-btn:hover { color: black; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; } .form-grid .full-width { grid-column: 1 / -1; }
+    .form-grid label { font-weight: bold; margin-bottom: 5px; display: block; }
+    .form-grid input, .form-grid select, .form-grid textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    /* 需求 #3: 日期輸入框與日曆按鈕 */
+    .date-input-container { position: relative; display: flex; align-items: center; }
+    .date-input-container input { flex-grow: 1; }
+    .calendar-toggle-btn { position: absolute; right: 1px; top: 50%; transform: translateY(-50%); border: none; background: #f0f0f0; height: calc(100% - 2px); width: 34px; cursor: pointer; border-radius: 0 4px 4px 0; color: #666; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+    .calendar-toggle-btn:hover { background: #e0e0e0; }
+    #datepicker-container { position: absolute; z-index: 1005; }
+    .datepicker { display: none; background-color: #fff; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-size: 14px; width: 280px; border-radius: 4px; padding: 5px; }
+    .datepicker-header { display: flex; justify-content: space-between; align-items: center; padding: 8px; background-color: #f0f0f0; }
+    .datepicker-header button { background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px 8px; border-radius: 4px; }
+    .datepicker-header button:hover { background-color: #ddd; }
+    .datepicker-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 2px; }
+    .datepicker-days span { padding: 8px 0; }
+    .datepicker-days .day-name { font-weight: bold; color: #888; font-size: 12px; }
+    .datepicker-days .day { cursor: pointer; border-radius: 50%; border: 1px solid transparent; }
+    .datepicker-days .day:hover { background-color: #f0f0f0; }
+    .datepicker-days .day.today { border-color: var(--primary-action-color); }
+    .datepicker-days .day.selected { background-color: var(--primary-action-color); color: #fff; }
+    .datepicker-days .day.other-month { color: #ccc; }
+    #form-submit-btn, .account-form-btn, #relationship-btn { background-color: var(--primary-action-color); color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+    #history-list, #help-content ul, #account-list, #detail-list, #comment-list, #changelog-list { list-style-type: none; padding: 0; max-height: 400px; overflow-y: auto; }
+    #history-list li, #help-content li, #account-list li, #detail-list li, #comment-list li, #changelog-list li { padding: 10px; border-bottom: 1px solid #eee; }
+    #detail-list li:last-child, #detail-list li.bio-content { border-bottom: none; }
+    #account-list li { display: flex; justify-content: space-between; align-items: center; }
+    .account-info { flex-grow: 1; }
+    .account-info span { display: block; font-size: 0.9em; color: #666; }
+    #help-content h4, #account-management h4 { margin-top: 15px; color: var(--primary-action-color); }
+    #help-content li { display: flex; align-items: start; }
+    #help-content .icon { font-size: 20px; width: 30px; display: inline-block; text-align: center; margin-right: 10px; flex-shrink: 0; }
+    .history-item-info { font-size: 0.9em; } .history-item-info .time { color: #666; }
+    .restore-btn { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    #confirmModal .modal-content, #personDetailModal .modal-content, #passwordResultModal .modal-content { max-width: 400px; text-align: center; }
+    #password-result-text { padding: 10px; background-color: #e9ecef; border-radius: 4px; margin: 10px 0; user-select: all; -webkit-user-select: all; }
+    #confirm-text { margin: 20px 0; }
+    .confirm-buttons button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 0 10px; }
+    #confirm-ok-btn { background-color: var(--danger-action-color); color: white; }
+    .header-section { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+    .filter-zoom-section { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .filter-section { flex-direction: column; gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ddd; margin-top: 10px; }
+    .filter-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .zoom-section { display: flex; align-items: center; }
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 10; border-radius: 5px; padding: 5px; list-style: none; text-align: left; max-height: 200px; overflow-y: auto;}
+    .dropdown-content label { display: block; padding: 5px 10px; }
+    .dropdown-content a { color: black; padding: 12px 16px; text-decoration: none; display: block; }
+    .dropdown-content a:hover { background-color: #f1f1f1; }
+    .dropdown:hover .dropdown-content { display: block; }
+    #image-preview { max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 5px; }
+    #crop-image-preview { display: block; max-width: 100%; }
+    #worship-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--worship-bg); z-index: 2000; transition: background-color 0.2s; }
+    .worship-container { display: flex; height: 100%; }
+    .deceased-list { position: fixed; right: 0; top: 0; height: 100%; width: 280px; background: rgba(0,0,0,0.08); padding: 15px; box-sizing: border-box; transform: translateX(calc(100% - 30px)); transition: transform 0.4s ease-in-out; z-index: 2001; }
+    .deceased-list:hover { transform: translateX(0); }
+    .deceased-list h3 { margin-top: 0; padding-right: 20px; }
+    .deceased-list ul { list-style: none; padding: 0; height: calc(100% - 40px); overflow-y: auto; }
+    .deceased-list li { margin-bottom: 5px; cursor: pointer; padding: 5px; border-radius: 4px; }
+    .deceased-list li:hover { background-color: rgba(0,0,0,0.1); }
+    .animation-area { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+    #worship-details { display: none; align-items: center; justify-content: center; text-align: left; max-width: 70%; background: rgba(255,255,255,0.5); padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    #worship-image { width: 150px; height: 150px; border-radius: 5px; margin-right: 20px; object-fit: cover; }
+    #worship-bio { font-size: 1.1em; color: #333; max-height: 200px; overflow-y: auto; }
+    .worship-controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: flex; gap: 10px;}
+    .offering { position: absolute; opacity: 0; font-size: 5rem; user-select: none; }
+    @keyframes offer-fruit { 0% { opacity: 0; transform: translateY(50px) scale(0.5); } 50% { opacity: 1; transform: translateY(-20px) scale(1.1); } 100% { opacity: 0; transform: translateY(-100px) scale(0.5); } }
+    @keyframes burn-paper-new { 0% { opacity: 1; transform: translateY(60px) scale(1.2); filter: brightness(1.2) saturate(1); } 50% { opacity: 0.8; transform: translateY(-50px) scale(1.5); filter: brightness(2) saturate(5) hue-rotate(-20deg); } 90% { opacity: 0.5; filter: brightness(1) saturate(1); } 100% { opacity: 0; transform: translateY(-180px) scale(0.2) rotate(720deg); filter: brightness(0.5); } }
+    @keyframes offer-hands { 0% { opacity: 0; transform: translateY(50px) scale(0.8); } 50% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-100px) scale(0.5); } }
+    .incense-container { position: absolute; display: flex; bottom: 0; animation: incense-fade-in 1s forwards; }
+    @keyframes incense-fade-in { from { opacity: 0; } to { opacity: 1; } }
+    .incense-stick { width: 4px; height: 80px; background-color: #8d6e63; margin: 0 5px; position: relative; }
+    .incense-stick::before { content: ''; position: absolute; top: -5px; left: -2px; width: 8px; height: 8px; background-color: #ff5722; border-radius: 50%; box-shadow: 0 0 8px 3px #ffab91, 0 0 10px 5px #ff7043; animation: incense-burn 5s infinite linear; }
+    .incense-smoke { position: absolute; left: 50%; transform: translateX(-50%); bottom: 100%; width: 20px; height: 60px; background: rgba(204, 204, 204, 0.6); border-radius: 50%; opacity: 0; filter: blur(5px); animation: offer-incense-smoke 4s ease-out infinite; }
+    @keyframes incense-burn { 0% { box-shadow: 0 0 8px 3px #ffab91, 0 0 10px 5px #ff7043; } 50% { box-shadow: 0 0 12px 5px #ffab91, 0 0 15px 8px #ff7043; } 100% { box-shadow: 0 0 8px 3px #ffab91, 0 0 10px 5px #ff7043; } }
+    @keyframes offer-incense-smoke { 0% { opacity: 0; transform: translateY(0) scale(0.2); } 25% { opacity: 0.6; } 100% { opacity: 0; transform: translateY(-150px) scale(3) rotate(20deg); } }
+    @keyframes offer-flower { 0% { opacity: 0; transform: translateY(50px) scale(0.5); } 50% { opacity: 1; transform: translateY(-20px) scale(1.2) rotate(-10deg); } 100% { opacity: 0; transform: translateY(-100px) scale(0.5) rotate(10deg); } }
+    .editor-controls-row { background-color: #f1f3f5; padding: 10px; border-radius: 6px; margin-top: 15px; border: 1px solid #dee2e6; }
+    .header-btn, .node-btn, #form-submit-btn, .account-form-btn, .confirm-buttons button { transition: transform 0.1s ease, filter 0.1s ease; }
+    .header-btn:active, .node-btn:active, #form-submit-btn:active, .account-form-btn:active, .confirm-buttons button:active { transform: scale(0.95); filter: brightness(0.9); }
+    [data-is-editor="false"] .editor-only { display: none !important; }
+    [data-is-admin="false"] .admin-only { display: none !important; }
+    [data-is-sysadmin="false"] .sysadmin-only { display: none !important; }
+    @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+    .rich-text-editor-container { border: 1px solid #ccc; border-radius: 4px; }
+    .editor-toolbar { background-color: #f5f5f5; padding: 5px; border-bottom: 1px solid #ccc; }
+    .toolbar-btn { background: none; border: 1px solid transparent; cursor: pointer; padding: 5px 8px; margin-right: 2px; font-size: 16px; border-radius: 3px; }
+    .toolbar-btn:hover { background-color: #e0e0e0; border-color: #ccc; }
+    .toolbar-btn.active { background-color: #d0d0d0; border-color: #bbb; }
+    .editor-content { min-height: 100px; padding: 10px; outline: none; }
+    .editor-content p { margin: 0 0 10px 0; }
+    .editor-content ul, .editor-content ol { margin: 0 0 10px 20px; }
+    input[type="color"] { width: 28px; height: 28px; padding: 2px; border: none; background: none; vertical-align: middle; }
+    .debug-toggle-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; text-align: center; }
+    .debug-toggle-container label { cursor: pointer; }
+    #debug-status { font-weight: bold; color: var(--danger-action-color); padding: 0 5px; }
+    #dashboardModal .modal-content, #timelineModal .modal-content, #galleryModal .modal-content, #mapModal .modal-content, #commentModal .modal-content, #changelogModal .modal-content { max-width: 90%; width: 1200px; }
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+    .stat-card { background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; }
+    .stat-card h4 { margin-top: 0; } .stat-card .stat-number { font-size: 2em; font-weight: bold; }
+    .chart-container { width: 100%; } .bar-chart { border-left: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 10px; }
+    .bar-item { display: flex; align-items: center; margin-bottom: 5px; } .bar-label { width: 80px; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar { background-color: var(--male-border); height: 20px; }
+    #relationshipResult { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-weight: bold; min-height: 30px; }
+    #anniversaryModal li { display: flex; justify-content: space-between; align-items: center; }
+    #anniversaryModal .days-left { color: #666; font-size: 0.9em; background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; }
+    #timeline, #changelog-list { position: relative; padding: 20px 0; list-style: none; max-height: 60vh; overflow-y: auto; }
+    #timeline:before, #changelog-list:before { content: ''; position: absolute; top: 0; left: 18px; height: 100%; width: 4px; background: #dcdcdc; }
+    .timeline-item, .changelog-item { margin: 0 0 20px 60px; position: relative; background: #fff; border-radius: 6px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .timeline-item:before, .changelog-item:before { content: ''; position: absolute; top: 15px; left: -15px; height: 0; width: 0; border: 7px solid transparent; border-right-color: #fff; }
+    .timeline-dot, .changelog-dot { position: absolute; top: 15px; left: -24px; height: 16px; width: 16px; background: var(--primary-action-color); border-radius: 50%; }
+    .timeline-date, .changelog-date { font-weight: bold; } .timeline-content h4, .changelog-content h4 { margin: 5px 0; }
+    .timeline-controls, .changelog-controls { float: right; }
+    #gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 60vh; overflow-y: auto; }
+    .gallery-thumbnail-container { position: relative; }
+    .gallery-thumbnail { cursor: pointer; width: 100%; height: 150px; object-fit: cover; border-radius: 5px; }
+    .gallery-delete-btn { position: absolute; top: 5px; right: 5px; }
+    #lightbox { position: fixed; z-index: 1001; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; }
+    #lightbox img { max-width: 90%; max-height: 80%; } #lightbox-caption { color: white; text-align: center; margin-top: 10px; padding: 0 20px; }
+    #map { height: 60vh; width: 100%; border-radius: 5px; }
+    .map-controls { margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+    .side-panel { position: fixed; top: 0; right: 0; width: 280px; height: 100%; background-color: #f8f9fa; box-shadow: -3px 0 8px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.3s ease-in-out; z-index: 1500; padding: 20px; box-sizing: border-box; }
+    .side-panel.is-open { transform: translateX(0); }
+    .side-panel h3 { text-align: left; margin-top: 20px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }
+    .side-panel-content { list-style: none; padding: 0; margin: 0; }
+    .side-panel-content a { display: block; padding: 12px 15px; text-decoration: none; color: var(--text-color); border-radius: 5px; transition: background-color 0.2s; }
+    .side-panel-content a:hover { background-color: #e9ecef; }
+    #worship-btn-fixed { position: fixed; top: 15px; right: 15px; z-index: 998; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #D32F2F; color: white; border: 1px solid #a02323; border-radius: 8px; padding: 5px 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); line-height: 1.2; }
+    #worship-btn-fixed span { font-size: 16px; font-weight: bold; }
+    #worship-btn-fixed small { font-size: 10px; font-weight: normal; margin-top: 2px; }
+    #notification-bell-container { position: fixed; top: 15px; right: 120px; z-index: 998; }
+    #notification-bell-btn { background: none; border: none; font-size: 24px; cursor: pointer; position: relative; }
+    #notification-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background-color: var(--danger-action-color); border-radius: 50%; display: none; }
+    #notification-panel { display: none; position: absolute; top: 40px; right: 0; width: 300px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #ddd; max-height: 400px; overflow-y: auto; z-index: 999; }
+    #notification-panel h4 { margin: 15px 15px 10px; }
+    #notification-panel ul { list-style: none; padding: 0; margin: 0; }
+    #notification-panel li { padding: 10px 15px; border-bottom: 1px solid #eee; }
+    #notification-panel li:last-child { border-bottom: none; }
+    #notification-panel .noti-time { font-size: 0.8em; color: #888; display: block; margin-top: 5px; }
+
+    @media (max-width: 768px) {
+        body { padding: 5px; }
+        .header-controls, .user-status-section, .filter-zoom-section, .filter-row, .header-section { flex-direction: column; gap: 8px; }
+        .node { min-width: 120px; font-size: 12px; }
+        .modal-content { width: 95%; margin: 10% auto; padding: 15px; }
+        .dashboard-grid { grid-template-columns: 1fr; }
+        #dashboardModal .modal-content, #timelineModal .modal-content, #galleryModal .modal-content, #mapModal .modal-content, #commentModal .modal-content, #changelogModal .modal-content { width: auto; max-width: 95%; }
+    }
+
+    @media print {
+        body { background-color: #fff; padding: 0; color: #000; }
+        .header-controls, .modal, .side-panel, #worship-btn-fixed, #notification-bell-container { display: none !important; }
+        .tree-container { border: none; background: none; overflow: visible; }
+        .node { box-shadow: none; border: 1px solid #000; }
+        .node, .node.deceased { background-color: #fff !important; color: #000 !important; }
+        .tree li::before, .tree li::after, .tree ul ul::before, .family-group::before { border-color: #000; }
+        .tree { transform: scale(1) !important; }
+    }
+</style>
+</head>
+<body>
+
+<button id="worship-btn-fixed">
+    <span>♨️ 祭拜</span>
+    <small>祭祖祭拜</small>
+</button>
+<div id="notification-bell-container">
+    <button id="notification-bell-btn">
+        <span>🔔</span>
+        <span id="notification-dot"></span>
+    </button>
+    <div id="notification-panel">
+        <h4>最新公告</h4>
+        <ul id="notification-list"></ul>
+    </div>
+</div>
+
+<div class="header-controls">
+    <h1>李氏家族 多功能家譜</h1>
+    <div class="user-status-section">
+        <span id="user-view">
+            歡迎, <span id="user-display-name"></span>!
+            <button id="logout-btn" class="header-btn small-red" title="登出">登出</button>
+        </span>
+        <span id="guest-view">
+            您目前為訪客模式
+            <button id="login-redirect-btn" class="header-btn small-blue" title="前往登入頁面">登入</button>
+        </span>
+    </div>
+    <div class="header-section">
+        <button id="open-advanced-panel-btn" class="header-btn header-btn-major">⚙️ 進階功能</button>
+        <button id="open-comment-modal-btn" class="header-btn header-btn-major">💬 留言板</button>
+        <button id="show-help-btn" class="header-btn small-blue" title="查看功能說明">功能說明</button>
+        <button id="contact-btn" class="header-btn small-blue" title="聯絡資訊">聯絡</button>
+    </div>
+    <div class="filter-zoom-section">
+        <button id="toggle-filter-panel-btn" class="header-btn header-btn-major">🔍 篩選器</button>
+        <div id="filter-panel" class="filter-section" style="display: none;">
+            <div class="filter-row">
+                <select id="name-select"><option value="">從下拉選擇姓名...</option></select>
+                <input type="text" id="search-name" placeholder="或輸入姓名關鍵字...">
+            </div>
+            <div class="filter-row">
+                <div class="dropdown">
+                    <button class="header-btn">房別</button>
+                    <div id="branch-filter-options" class="dropdown-content">
+                        <label><input type="checkbox" value="長房"> 長房</label><label><input type="checkbox" value="二房"> 二房</label><label><input type="checkbox" value="三房"> 三房</label><label><input type="checkbox" value="四房"> 四房</label><label><input type="checkbox" value="五房"> 五房</label><label><input type="checkbox" value="六房"> 六房</label><label><input type="checkbox" value="七房"> 七房</label><label><input type="checkbox" value="長女"> 長女</label><label><input type="checkbox" value="次女"> 次女</label><label><input type="checkbox" value="other"> 其他</label>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="header-btn">性別</button>
+                    <div id="gender-filter-options" class="dropdown-content">
+                        <label><input type="checkbox" value="男"> 男</label><label><input type="checkbox" value="女"> 女</label><label><input type="checkbox" value="不詳"> 不詳</label>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="header-btn">存歿</button>
+                    <div id="status-filter-options" class="dropdown-content">
+                        <label><input type="checkbox" value="存"> 存</label><label><input type="checkbox" value="歿"> 歿</label><label><input type="checkbox" value="不詳"> 不詳</label>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="header-btn">紀念日</button>
+                    <div id="anniversary-filter-options" class="dropdown-content">
+                        <label><input type="checkbox" value="birthday"> 生日 (90天內)</label><label><input type="checkbox" value="deathday"> 忌日 (90天內)</label>
+                    </div>
+                </div>
+            </div>
+             <div class="filter-row">
+                <button id="filter-btn" class="header-btn small-blue">搜尋</button>
+                <button id="reset-filter-btn" class="header-btn small-red">重設</button>
+            </div>
+        </div>
+        <div class="zoom-section">
+            <span>縮放:</span>
+            <button id="zoom-out-btn" class="header-btn">-</button>
+            <input type="range" id="zoom-slider" min="0.2" max="2" step="0.1" value="1">
+            <button id="zoom-in-btn" class="header-btn">+</button>
+        </div>
+    </div>
+    <div class="editor-controls-row editor-only">
+        <span id="status-indicator"></span>
+        <button id="show-history-btn" class="header-btn header-btn-editor" title="查看所有修改紀錄並還原">查看修改歷史</button>
+        <button id="manage-accounts-btn" class="header-btn header-btn-editor admin-only" title="管理編輯者帳號">帳號管理</button>
+        <button id="save-html-btn" class="header-btn header-btn-editor" title="將目前所有變更儲存為一個新的HTML檔案">另存新檔 (HTML)</button>
+    </div>
+</div>
+
+<div class="tree-container"><div id="family-tree-root" class="tree"></div></div>
+
+<div id="worship-view" class="modal"><div class="worship-container"><div class="animation-area"><div id="worship-details" style="display: none;"><img id="worship-image" src=""><div id="worship-bio"></div></div><h2 id="worship-target-name">請選擇祭拜對象</h2><div id="offering-animation-container"></div></div><div class="deceased-list"><h3>歷代祖先</h3><ul id="deceased-list-ul"></ul></div></div><div class="worship-controls"><button class="header-btn" data-worship="fruit">🍎 獻果</button><button class="header-btn" data-worship="paper">💰 燒紙</button><button class="header-btn" data-worship="incense">♨️ 上香</button><button class="header-btn" data-worship="flower">💐 獻花</button><button class="header-btn" data-worship="hands">🙏 拜拜</button><button id="end-worship-btn" class="header-btn small-red">結束</button></div></div>
+<div id="formModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="form-title"></h2><form id="person-form"><input type="hidden" id="personId"><input type="hidden" id="parentId"><div class="form-grid"><div><label for="name">姓名:</label><input type="text" id="name" required></div><div><label for="branchName">房別/分支:</label><input type="text" id="branchName" placeholder="長房, 次男, 1..."></div><div><label for="gender">性別:</label><select id="gender"><option value="不詳">不詳</option><option value="男">男</option><option value="女">女</option></select></div><div><label for="status">存歿:</label><select id="status"><option value="不詳">不詳</option><option value="存">存</option><option value="歿">歿</option></select></div>
+<div class="full-width date-input-container">
+    <label for="birth">生日:</label>
+    <input type="text" id="birth" placeholder="例如：1950年1月1日 或 約1950年">
+    <button type="button" class="calendar-toggle-btn" data-target="birth">📅</button>
+</div>
+<div class="full-width date-input-container">
+    <label for="deathday">忌日:</label>
+    <input type="text" id="deathday" placeholder="例如：2020年1月1日 或 約2020年">
+    <button type="button" class="calendar-toggle-btn" data-target="deathday">📅</button>
+</div>
+<div class="full-width"><label for="location">地址/居住地:</label><input type="text" id="location" placeholder="例如：高雄市左營區"></div><div class="full-width"><label for="cemetery">墓地:</label><input type="text" id="cemetery" placeholder="例如：新港公墓"></div><div class="full-width"><label for="father">父親:</label><input type="text" id="father"></div><div class="full-width"><label for="mother">母親:</label><input type="text" id="mother"></div><div class="full-width"><label for="spousesText">配偶 (文字):</label><input type="text" id="spousesText" placeholder="請用逗號(,)分隔多位配偶"></div><div class="full-width"><label for="image-upload">上傳照片:</label><input type="file" id="image-upload" accept="image/*"><input type="hidden" id="image-data"><img id="image-preview" src="" alt="照片預覽" style="display:none;"></div><div class="full-width"><label for="bio-editor">生平簡介:</label><div class="rich-text-editor-container"><div class="editor-toolbar"><button type="button" class="toolbar-btn" data-command="bold" title="粗體"><b>B</b></button><button type="button" class="toolbar-btn" data-command="italic" title="斜體"><i>I</i></button><button type="button" class="toolbar-btn" data-command="underline" title="底線"><u>U</u></button><button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="項目符號">●</button><button type="button" class="toolbar-btn" data-command="insertOrderedList" title="編號清單">1.</button><input type="color" class="toolbar-btn" data-command="foreColor" title="文字顏色"></div><div id="bio-editor" class="editor-content" contenteditable="true"></div></div></div></div><button type="submit" id="form-submit-btn">儲存</button></form></div></div>
+<div id="historyModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <div class="history-header">
+            <h4>修改歷史紀錄</h4>
+            <div class="history-nav-buttons">
+                <button id="undo-btn" class="history-nav-btn" title="上一步 (Undo)">↶</button>
+                <button id="redo-btn" class="history-nav-btn" title="下一步 (Redo)">↷</button>
+            </div>
+        </div>
+        <ul id="history-list"></ul>
+        <div class="modal-footer">
+            <button id="revert-to-initial-btn" class="header-btn small-red">還原到最初版本</button>
+        </div>
+    </div>
+</div>
+<div id="confirmModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="confirm-title">確認操作</h2><p id="confirm-text"></p><div class="confirm-buttons"><button id="confirm-cancel-btn">取消</button><button id="confirm-ok-btn">確定</button></div></div></div>
+<div id="helpModal" class="modal">
+    <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <span class="close-btn">&times;</span>
+        <h2>功能說明</h2>
+        <div id="help-content">
+            <h4>權限模式</h4>
+            <ul>
+                <li><span class="icon">👤</span><div><strong>訪客模式：</strong>預設模式，只能瀏覽家譜，無法進行任何修改，確保資料安全。</div></li>
+                <li><span class="icon">🔑</span><div><strong>編輯模式：</strong>使用有效帳號密碼登入後啟用。此模式下才能看到編輯、新增、刪除等按鈕，並可儲存變更。</div></li>
+                <li><span class="icon">👑</span><div><strong>管理員模式：</strong>使用 `admin` 帳號登入後，除了編輯功能外，還會出現「帳號管理」按鈕，可新增或刪除其他編輯者。</div></li>
+                <li><span class="icon">🔧</span><div><strong>工程管理員模式：</strong>使用 `root` 帳號登入後，擁有最高權限，可修改包含 `admin` 在內的所有帳號。</div></li>
+            </ul>
+            <h4>成員節點按鈕</h4>
+            <ul>
+                <li><span class="icon toggle-btn">+/-</span><div><strong>展開/收合：</strong>顯示或隱藏該成員的所有後代分支。</div></li>
+                <li><span class="icon edit-btn">✎</span><div><strong>修改成員：</strong>點擊以修改該成員的姓名、生日、照片等詳細資料。</div></li>
+                <li><span class="icon delete-btn">🗑️</span><div><strong>刪除成員：</strong>點擊以刪除該成員及其所有後代。此操作會被記錄，可從歷史紀錄還原。</div></li>
+                <li><span class="icon add-btn">⊕</span><div><strong>新增後代：</strong>點擊為該成員新增一位子女。</div></li>
+                <li><span class="icon add-spouse-node-btn">+👤</span><div><strong>新增配偶：</strong>為該位直系成員新增一位配偶資料。</div></li>
+            </ul>
+            <h4>主要功能按鈕</h4>
+            <ul>
+                <li><span class="icon">📖</span><div><strong>查看修改歷史：</strong>顯示所有的操作紀錄（新增、修改、刪除、還原）。您可以點擊「還原」按鈕將家譜恢復到過去的任何一個時間點。</div></li>
+                <li><span class="icon">👥</span><div><strong>帳號管理：</strong>新增、修改或刪除其他可以編輯此家譜的帳號密碼。</div></li>
+                <li><span class="icon">💾</span><div><strong>另存新檔 (HTML)：</strong>這是最重要的功能！當您完成修改後，點擊此按鈕會產生一個新的 .html 檔案並下載。這個新檔案已包含了您所有的變更。請將這個新檔案作為您的主要版本，並分享給家人。</div></li>
+            </ul>
+            <h4>進階功能 (位於 "⚙️ 進階功能" 選單中)</h4>
+            <ul>
+                <li><span class="icon">📊</span><div><strong>家族數據：</strong>開啟統計儀表板，以圖表和數字呈現家族的總人數、性別比例、各房成員分佈等資訊。</div></li>
+                <li><span class="icon">👨‍👩‍👧‍👦</span><div><strong>輩分關係：</strong>開啟關係計算機，可選擇任意兩位成員，系統會自動分析並顯示他們之間的血緣與姻親關係。</div></li>
+                <li><span class="icon">📅</span><div><strong>重要紀念日：</strong>掃描所有成員的生日與忌日資料，並列出未來90天內即將到來的紀念日。</div></li>
+                <li><span class="icon">📜</span><div><strong>家族時間軸：</strong>以時間軸方式呈現家族的共同回憶，例如搬家、旅遊等重要事件。編輯者可新增、修改、刪除事件。</div></li>
+                <li><span class="icon">🖼️</span><div><strong>照片藝廊：</strong>一個集中的相簿，可上傳老照片、撰寫圖說，並在照片中標記多位家族成員。</div></li>
+                <li><span class="icon">🗺️</span><div><strong>地圖模式：</strong>(需網路) 將有地址紀錄的成員標示在地圖上。首次使用或更新地址後需點擊「定位地址」。新增搜尋功能，可快速在地圖上找到特定成員。</div></li>
+                <li><span class="icon">💾</span><div><strong>匯出JSON備份：</strong>一鍵將家譜樹、使用者、時間軸、相簿等所有核心資料打包成一個 `.json` 檔案下載，用於純資料備份。</div></li>
+                <li><span class="icon">🖨️</span><div><strong>列印預覽：</strong>觸發瀏覽器列印功能，並自動套用適合紙張列印的黑白簡潔格式。</div></li>
+                <li><span class="icon">⚙️</span><div><strong>版本號機制：</strong>每次進行資料修改 (新增、編輯、刪除)，版本號末位會自動增加，方便追蹤每次存檔的內容。</div></li>
+                <li><span class="icon">🐞</span><div><strong>自檢模式：</strong>在「聯絡」視窗中可以找到此開關。開啟後，程式的所有主要操作都會在瀏覽器的開發者工具(按F12開啟)中的「Console」面板印出詳細資訊，方便追蹤與除錯。</div></li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div id="accountModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>帳號管理</h2><div id="account-management"><h4>新增編輯者</h4><form id="add-account-form" class="form-grid"><input type="text" id="new-displayName" placeholder="使用者名稱" required><input type="text" id="new-username" placeholder="新登入帳號" required><input type="password" id="new-password" placeholder="新密碼" required><button type="submit" class="account-form-btn full-width">新增</button></form><h4>現有編輯者</h4><ul id="account-list"></ul></div></div></div>
+<div id="accountEditModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>修改帳號</h2><form id="edit-account-form" class="form-grid"><input type="hidden" id="edit-original-username"><div class="full-width"><label for="edit-displayName">使用者名稱:</label><input type="text" id="edit-displayName" required></div><div class="full-width"><label for="edit-username">登入帳號:</label><input type="text" id="edit-username" required></div><div class="full-width"><label for="edit-password">新密碼 (留空表示不變):</label><input type="password" id="edit-password" placeholder="留空則不修改密碼"></div><button type="submit" class="account-form-btn full-width">儲存變更</button></form></div></div>
+<div id="personDetailModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="detail-name"></h2><img id="detail-image" src="" alt="成員照片" style="max-width: 150px; max-height: 150px; border-radius: 50%; margin: 10px auto; display: none;"><ul id="detail-list"></ul></div></div>
+<div id="contactModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>聯絡資訊</h2><p>有任何問題建議之類可以寄信給我，我的Email是: cool5122001222@yahoo.com.tw</p>
+<p id="version-info">版本: v3.7 (2025.08.27)</p>
+<button id="show-changelog-btn" class="header-btn small-blue">查看版本更新資訊</button>
+<div class="debug-toggle-container"><label for="debug-mode-toggle">自檢模式: <span id="debug-status">關閉</span><input type="checkbox" id="debug-mode-toggle"></label><p style="font-size: 0.8em; color: #666;">(開啟後會在瀏覽器控制台輸出詳細日誌)</p></div></div></div>
+<div id="forgotPasswordModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>忘記密碼</h2><p>請輸入「使用者名稱」和「登入帳號」以找回密碼：</p><div class="form-grid"><div class="full-width"><label for="forgot-displayName">使用者名稱:</label><input type="text" id="forgot-displayName"></div><div class="full-width"><label for="forgot-username">登入帳號:</label><input type="text" id="forgot-username"></div></div><button id="retrieve-password-btn" class="account-form-btn">找回密碼</button></div></div>
+<div id="passwordResultModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>您的密碼</h2><p>請複製您的密碼：</p><div id="password-result-text"></div></div></div>
+<div id="dashboardModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>家族數據儀表板</h2><div class="dashboard-grid"><div id="general-stats"></div><div id="charts"></div></div></div></div>
+<div id="relationshipModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>輩分關係計算機</h2><div class="form-grid"><div><label for="personA">成員 A</label><select id="personA"></select></div><div><label for="personB">成員 B</label><select id="personB"></select></div></div><button id="relationship-btn">計算關係</button><div id="relationshipResult"></div></div></div>
+<div id="anniversaryModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>重要紀念日提醒</h2><div id="anniversary-filter" style="margin-bottom: 15px; text-align: center;"><label><input type="radio" name="anniversary_type" value="birthday" checked> 生日</label><label style="margin-left: 15px;"><input type="radio" name="anniversary_type" value="deathday"> 忌日</label></div><div id="birthdays-view"><h4>未來90天內的生日</h4><ul id="upcomingBirthdays"></ul></div><div id="deathdays-view" style="display: none;"><h4>未來90天內的忌日</h4><ul id="upcomingDeathdays"></ul></div></div></div>
+<div id="timelineModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>家族時間軸</h2><button id="add-timeline-event-btn" class="header-btn small-blue editor-only">新增事件</button><ul id="timeline"></ul></div></div>
+<div id="timelineFormModal" class="modal"><div class="modal-content" style="max-width: 500px;"><span class="close-btn">&times;</span><h2 id="timeline-form-title"></h2><form id="timeline-form"><input type="hidden" id="timelineEventId"><div class="form-grid"><div class="full-width"><label for="timeline-date">日期:</label><input type="date" id="timeline-date" required></div><div class="full-width"><label for="timeline-title">事件標題:</label><input type="text" id="timeline-title" required></div><div class="full-width"><label for="timeline-description">事件描述:</label><textarea id="timeline-description" rows="4"></textarea></div></div><button type="submit" class="account-form-btn">儲存事件</button></form></div></div>
+<div id="galleryModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>照片藝廊</h2><button id="upload-photo-btn" class="header-btn small-blue editor-only">上傳照片</button><div id="gallery-grid"></div></div></div>
+<div id="photoFormModal" class="modal"><div class="modal-content" style="max-width: 500px;"><span class="close-btn">&times;</span><h2 id="photo-form-title"></h2><form id="photo-form"><input type="hidden" id="photoId"><div class="form-grid"><div class="full-width"><label for="photo-upload">上傳照片:</label><input type="file" id="photo-upload" accept="image/*" required><img id="photo-preview" src="" style="max-width: 100%; margin-top: 10px; display:none;"></div><div class="full-width"><label for="photo-description">照片描述:</label><textarea id="photo-description" rows="3"></textarea></div><div class="full-width"><label for="photo-tags">標記成員 (可多選):</label><select id="photo-tags" multiple style="height: 150px;"></select></div></div><button type="submit" class="account-form-btn">儲存照片</button></form></div></div>
+<div id="lightbox" class="modal"><span class="close-btn" style="color: #fff; font-size: 40px; text-shadow: 0 1px 2px #000;">&times;</span><img id="lightbox-image" src=""><div id="lightbox-caption"></div></div>
+<div id="mapModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>地圖模式 (需要網路連線)</h2><div class="map-controls"><button id="geocode-btn" class="header-btn small-blue">定位地址</button><span> (首次使用或更新地址後需點擊)</span><input type="text" id="map-search-name" placeholder="搜尋姓名..." style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;"><button id="map-search-btn" class="header-btn small-blue">搜尋</button></div><div id="map"></div></div></div>
+<div id="commentModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>家族留言板</h2><div id="comment-list-container" style="margin-bottom: 20px;"><ul id="comment-list"></ul></div><div class="editor-only"><h4>發表新留言</h4><div id="comment-editor-container" class="rich-text-editor-container"><div class="editor-toolbar"><button type="button" class="toolbar-btn" data-command="bold" title="粗體"><b>B</b></button><button type="button" class="toolbar-btn" data-command="italic" title="斜體"><i>I</i></button><button type="button" class="toolbar-btn" data-command="underline" title="底線"><u>U</u></button><button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="項目符號">●</button><button type="button" class="toolbar-btn" data-command="insertOrderedList" title="編號清單">1.</button><input type="color" class="toolbar-btn" data-command="foreColor" title="文字顏色"></div><div id="comment-editor" class="editor-content" contenteditable="true"></div></div><button id="submit-comment-btn" class="header-btn small-blue" style="margin-top: 10px;">送出</button></div></div></div>
+<div id="changelogModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>版本更新歷史</h2><button id="add-changelog-btn" class="header-btn small-blue editor-only">新增條目</button><ul id="changelog-list"></ul></div></div>
+<div id="changelogFormModal" class="modal"><div class="modal-content" style="max-width: 500px;"><span class="close-btn">&times;</span><h2 id="changelog-form-title"></h2><form id="changelog-form"><input type="hidden" id="changelogId"><div class="form-grid"><div class="full-width"><label for="changelog-version">版本號:</label><input type="text" id="changelog-version" placeholder="例如: 3.7.1" required></div><div class="full-width"><label for="changelog-date">日期:</label><input type="date" id="changelog-date" required></div><div class="full-width"><label for="changelog-changes">更新內容 (每行一項):</label><textarea id="changelog-changes" rows="5" required></textarea></div></div><button type="submit" class="account-form-btn">儲存</button></form></div></div>
+<div id="cropModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>裁切照片</h2><div><img id="crop-image-preview" src=""></div><div style="text-align: center; margin-top: 15px;"><button id="crop-confirm-btn" class="header-btn small-blue">確定裁切</button></div></div></div>
+<div id="datepicker-container"></div>
+
+<div id="advanced-panel" class="side-panel">
+    <button id="close-advanced-panel-btn" class="close-btn">&times;</button>
+    <h3>⚙️ 進階功能</h3>
+    <ul class="side-panel-content">
+        <li><a href="#" data-modal="dashboardModal">📊 家族數據</a></li>
+        <li><a href="#" data-modal="relationshipModal">👨‍👩‍👧‍👦 輩分關係</a></li>
+        <li><a href="#" data-modal="anniversaryModal">📅 重要紀念日</a></li>
+        <li><a href="#" data-modal="timelineModal">📜 家族時間軸</a></li>
+        <li><a href="#" data-modal="galleryModal">🖼️ 照片藝廊</a></li>
+        <li><a href="#" data-modal="mapModal">🗺️ 地圖模式</a></li>
+        <li><a href="#" id="export-json-btn-side" class="editor-only">💾 匯出JSON備份</a></li>
+        <li><a href="#" id="print-btn-side">🖨️ 列印預覽</a></li>
+    </ul>
+</div>
+
+<script id="family-data" type="application/json"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- App State & Constants ---
+    let historyStack = [];
+    let currentHistoryIndex = -1;
+    let isEditor = false;
+    let isAdmin = false;
+    let isSysAdmin = false;
+    let currentZoom = 1;
+    let isDebugMode = false;
+    let map; // Leaflet map instance
+    let markersLayer = null; // Leaflet markers layer
+    let cropper; // Cropper.js instance
+    let activeDatepicker = null;
+
+    // --- Debug Logging Function ---
+    function logDebug(...args) {
+        if (isDebugMode) {
+            console.log('[DEBUG]', ...args);
+        }
+    }
+    
+    // --- Data Management ---
+    function updateStatusByGeneration(node, generation = 1) {
+        if (!node) return;
+
+        if (generation <= 4) {
+            node.status = '歿';
+        } else if (generation >= 8) {
+            node.status = '存';
+        }
+        
+        (node.children || []).forEach(child => {
+            updateStatusByGeneration(child, generation + 1);
+        });
+    }
+
+    function generateDefaultTree() {
+        logDebug("Generating default tree data.");
+        let root = {
+            id: 'root', name: '李宗興', gender: '男', status: '歿', father: '', mother: '', spousesText: '李黃敬慎',
+            spouses: [{id: 'spouse-root-1', name: '李黃敬慎', gender: '女', status: '歿', father: '', mother: '', spousesText: '李宗興'}],
+            children: [
+                { 
+                    id: 'root-1', name: '李瑞和', branchName: '長房', gender: '男', father: '李宗興', mother: '李黃敬慎', spousesText: '未知',
+                    spouses:[{id: 'spouse-root-1-1', name: '未知', gender: '女', spousesText: '李瑞和'}], 
+                    children: [
+                        { 
+                            id: 'root-1-1', name: '未知', branchName: '大房', gender: '男', father: '李瑞和', mother: '未知', spousesText: '未知',
+                            spouses: [{id: 'spouse-root-1-1-1', name: '未知', gender: '女', spousesText: '未知'}],
+                            children: [
+                                { 
+                                    id: 'root-1-1-1', name: '李清泉', branchName: '大房', gender: '男', father: '未知', mother: '未知', spousesText: '未知',
+                                    spouses: [{id: 'spouse-root-1-1-1-1', name: '未知', gender: '女', spousesText: '李清泉'}],
+                                    children: [
+                                        { 
+                                            id: 'root-1-1-1-1', name: '李澤川', branchName: '大房', gender: '男', father: '李清泉', mother: '未知', spousesText: '未知',
+                                            spouses: [{id: 'spouse-root-1-1-1-1-1', name: '未知', gender: '女', spousesText: '李澤川'}],
+                                            children: [
+                                                { id: 'root-1-1-1-1-1', name: '李振宗', branchName: '大房', gender: '男', father: '李澤川', mother: '未知', spouses: [{id: 'spouse-root-1-1-1-1-1-1', name: '未知', gender: '女', spousesText: '李振宗'}], children: [], collapsed: true, spousesText: '未知' }
+                                            ], collapsed: true 
+                                        }
+                                    ], collapsed: true 
+                                }
+                            ], collapsed: true 
+                        },
+                        { 
+                            id: 'root-1-2', name: '未知', branchName: '二房', gender: '男', father: '李瑞和', mother: '未知', spousesText: '未知',
+                            spouses: [{id: 'spouse-root-1-2-1', name: '未知', gender: '女', spousesText: '未知'}],
+                            children: [
+                                { id: 'root-1-2-1', name: '李車', branchName: '大房', gender: '男', father: '未知', mother: '未知', spouses: [{id: 'spouse-root-1-2-1-1', name: '李欉', gender: '女', spousesText: '李車'}], children: [], collapsed: true, spousesText: '李欉' }
+                            ], collapsed: true 
+                        }
+                    ], 
+                    collapsed: true 
+                },
+                { 
+                    id: 'root-2', name: '李瑞珍', branchName: '二房', gender: '男', father: '李宗興', mother: '李黃敬慎', spousesText: '黃緩',
+                    spouses:[{id: 'spouse-root-2-1', name: '黃緩', gender: '女', spousesText: '李瑞珍'}], 
+                    children: [
+                        { 
+                            id: 'root-2-1', name: '李媽維', branchName: '大房', gender: '男', father: '李瑞珍', mother: '黃緩', spousesText: '盧英',
+                            spouses: [{id: 'spouse-root-2-1-1', name: '盧英', gender: '女', spousesText: '李媽維'}],
+                            children: [
+                                { 
+                                    id: 'root-2-1-1', name: '李文騰', branchName: '大房', gender: '男', father: '李媽維', mother: '盧英', spousesText: '未知',
+                                    spouses: [{id: 'spouse-root-2-1-1-1', name: '未知', gender: '女', spousesText: '李文騰'}],
+                                    children: [
+                                        { 
+                                            id: 'root-2-1-1-1', name: '李碧玉', branchName: '長女', gender: '女', father: '李文騰', mother: '未知', spousesText: '未知',
+                                            spouses: [{id: 'spouse-root-2-1-1-1-1', name: '未知', gender: '男', spousesText: '李碧玉'}],
+                                            children: [
+                                                { id: 'root-2-1-1-1-1', name: '未知', branchName: '大房', gender: '男', father: '未知', mother: '李碧玉', spouses: [{id: 'spouse-root-2-1-1-1-1-1', name: '陳李秀嬌', gender: '女', spousesText: '未知'}], children: [], collapsed: true, spousesText: '陳李秀嬌' }
+                                            ], collapsed: true 
+                                        }
+                                    ], collapsed: true 
+                                }
+                            ], collapsed: true 
+                        },
+                        { 
+                            id: 'root-2-2', name: '李木現', branchName: '二房', gender: '男', father: '李瑞珍', mother: '黃緩', spousesText: '陳氏妹',
+                            spouses: [{id: 'spouse-root-2-2-1', name: '陳氏妹', gender: '女', spousesText: '李木現'}],
+                            children: [
+                                { id: 'root-2-2-1', name: '李石樹', branchName: '大房', gender: '男', father: '李木現', mother: '陳氏妹', spouses: [{id: 'spouse-root-2-2-1-1', name: '李知母', gender: '女', spousesText: '李石樹'}], children: [], collapsed: true, spousesText: '李知母' }
+                            ], collapsed: true 
+                        }
+                    ], 
+                    collapsed: true 
+                },
+                { 
+                    id: 'root-3', name: '李瑞盛', branchName: '三房', gender: '男', bio: '綽號：新品', father: '李宗興', mother: '李黃敬慎', spousesText: '李黃萬娘',
+                    spouses:[{id: 'spouse-root-3-1', name: '李黃萬娘', gender: '女', bio: '綽號：萬娘', spousesText: '李瑞盛'}], 
+                    children: [
+                        {
+                            id: 'root-3-1', name: '李永綏', branchName: '大房', gender: '男', father: '李瑞盛', mother: '李黃萬娘', spousesText: '李林纏',
+                            spouses: [{id: 'spouse-root-3-1-1', name: '李林纏', gender: '女', bio: '林眼科那邊的人', spousesText: '李永綏'}],
+                            children: [
+                                {
+                                    id: 'root-3-1-1', name: '李坤', branchName: '大房', gender: '男', cemetery: '兵營後方', father: '李永綏', mother: '李林纏', spousesText: '李陳治,李林皮,李林香',
+                                    spouses: [
+                                        {id: 'spouse-root-3-1-1-1', name: '李陳治', gender: '女', cemetery: '查無', spousesText: '李坤'},
+                                        {id: 'spouse-root-3-1-1-2', name: '李林皮', gender: '女', cemetery: '兵營後方', spousesText: '李坤'},
+                                        {id: 'spouse-root-3-1-1-3', name: '李林香', gender: '女', cemetery: '菜堂', spousesText: '李坤'}
+                                    ],
+                                    children: [ 
+                                        { 
+                                            id: 'child-of-likun-1', name: '李懷玉', branchName: '大房', gender: '男', cemetery: '新港公墓的孝區第六棟第六層5號0102060605', father: '李坤', mother: '李陳治', 
+                                            spousesText: '李王寶治,李陳雪霞',
+                                            spouses: [
+                                                {id: 's-lk-2', name: '李王寶治', gender:'女', cemetery: '查無', spousesText: '李懷玉', bio: '婚前亡故'}, 
+                                                {id: 's-lk-3', name: '李陳雪霞', gender:'女', cemetery: '天主教公墓', spousesText: '李懷玉'}
+                                            ], 
+                                            children: [
+                                                { id: 'gen6-yuh-1', name: '李顯彰', branchName: '大房', gender: '男', bio: '高雄', father: '李懷玉', mother: '李陳雪霞', spousesText: '柯春子', location: '高雄市左營區',
+                                                    spouses: [{id: 's-gen6-yuh-1', name: '柯春子', gender: '女', spousesText: '李顯彰'}],
+                                                    children: [
+                                                        { id: 'gen7-chang-1', name: '李政宗', branchName: '大房', gender: '男', father: '李顯彰', mother: '柯春子', spousesText: '未知', spouses: [{id: 's-gen7-chang-1', name: '未知', gender: '女', spousesText: '李政宗'}], children: [], collapsed: true },
+                                                        { id: 'gen7-chang-2', name: '李意謹', branchName: '長女', gender: '女', father: '李顯彰', mother: '柯春子', spousesText: '未知', spouses: [{id: 's-gen7-chang-2', name: '未知', gender: '男', bio: '女婿', spousesText: '李意謹'}], children: [], collapsed: true },
+                                                        { id: 'gen7-chang-3', name: '李美華', branchName: '次女', gender: '女', father: '李顯彰', mother: '柯春子', spousesText: '馬', spouses: [{id: 's-gen7-chang-3', name: '馬', gender: '男', bio: '女婿', spousesText: '李美華'}], children: [], collapsed: true },
+                                                        { id: 'gen7-chang-4', name: '李美文', branchName: '三女', gender: '女', father: '李顯彰', mother: '柯春子', spousesText: '未知', spouses: [{id: 's-gen7-chang-4', name: '未知', gender: '男', bio: '女婿', spousesText: '李美文'}], children: [], collapsed: true },
+                                                        { id: 'gen7-chang-5', name: '李美珍', branchName: '四女', gender: '女', father: '李顯彰', mother: '柯春子', spousesText: '未知', spouses: [{id: 's-gen7-chang-5', name: '未知', gender: '男', bio: '女婿', spousesText: '李美珍'}], children: [], collapsed: true }
+                                                    ],
+                                                    collapsed: true
+                                                },
+                                                { id: 'gen6-yuh-2', name: '李秋雄', branchName: '二房', gender: '男', cemetery: '新港公墓的仁外環區第六棟第五層11號0113060511', father: '李懷玉', mother: '李陳雪霞', spousesText: '盧水雪', 
+                                                    spouses: [{id: 's-gen6-yuh-2', name: '盧水雪', gender: '女', spousesText: '李秋雄'}],
+                                                    children: [
+                                                        { id: 'gen7-hsiung-1', name: '李世仁', branchName: '大房', gender: '男', father: '李秋雄', mother: '盧水雪', spousesText: '周秀珍',
+                                                            spouses: [{id: 's-gen7-hsiung-1', name: '周秀珍', gender: '女', spousesText: '李世仁'}],
+                                                            children: [
+                                                                { id: 'gen8-ren-1', name: '李哲緯', branchName: '大房', gender: '男', father: '李世仁', mother: '周秀珍', spousesText: '', spouses:[], children: [], collapsed: true},
+                                                                { id: 'gen8-ren-2', name: '李亭翰', branchName: '二房', gender: '男', father: '李世仁', mother: '周秀珍', spousesText: '', spouses:[], children: [], collapsed: true},
+                                                                { id: 'gen8-ren-3', name: '李紋萱', branchName: '長女', gender: '女', father: '李世仁', mother: '周秀珍', spousesText: '', spouses:[], children: [], collapsed: true}
+                                                            ],
+                                                            collapsed: true
+                                                        },
+                                                        { id: 'gen7-hsiung-2', name: '李宗亮', branchName: '二房', gender: '男', father: '李秋雄', mother: '盧水雪', spousesText: '張翠鳳,未知',
+                                                            spouses: [{id: 's-gen7-hsiung-2a', name: '張翠鳳', gender: '女', spousesText: '李宗亮'}, {id: 's-gen7-hsiung-2b', name: '未知', gender: '女', spousesText: '李宗亮'}],
+                                                            children: [
+                                                                { id: 'gen8-liang-1', name: '李怡學', branchName: '大房', gender: '男', father: '李宗亮', mother: '張翠鳳', spousesText: '未知', 
+                                                                    spouses: [{id: 's-gen8-liang-1', name: '未知', gender: '女', spousesText: '李怡學'}],
+                                                                    children: [
+                                                                        { id: 'gen9-hsueh-1', name: '李婕妤', branchName: '長女', gender: '女', father: '李怡學', mother: '未知', spousesText: '', spouses:[], children: [], collapsed: true}
+                                                                    ],
+                                                                    collapsed: true
+                                                                },
+                                                                { id: 'gen8-liang-2', name: '李怡霖', branchName: '二房', gender: '男', father: '李宗亮', mother: '張翠鳳', spousesText: '', spouses:[], children: [], collapsed: true},
+                                                                { id: 'gen8-liang-3', name: '李欣潔', branchName: '長女', gender: '女', father: '李宗亮', mother: '張翠鳳', spousesText: '', spouses:[], children: [], collapsed: true}
+                                                            ],
+                                                            collapsed: true
+                                                        },
+                                                        { id: 'gen7-hsiung-3', name: '李宗軍', branchName: '三房', gender: '男', father: '李秋雄', mother: '盧水雪', spousesText: '蘇珊',
+                                                            spouses: [{id: 's-gen7-hsiung-3', name: '蘇珊', gender: '女', spousesText: '李宗軍'}],
+                                                            children: [
+                                                                { id: 'gen8-chun-1', name: '李尉豪', branchName: '大房', gender: '男', father: '李宗軍', mother: '蘇珊', spousesText: '', spouses:[], children: [], collapsed: true},
+                                                                { id: 'gen8-chun-2', name: '李尉程', branchName: '二房', gender: '男', father: '李宗軍', mother: '蘇珊', spousesText: '', spouses:[], children: [], collapsed: true}
+                                                            ],
+                                                            collapsed: true
+                                                        },
+                                                        { id: 'gen7-hsiung-4', name: '李宗峯', branchName: '四房', gender: '男', father: '李秋雄', mother: '盧水雪', spousesText: '林佑美',
+                                                            spouses: [{id: 's-gen7-hsiung-4', name: '林佑美', gender: '女', spousesText: '李宗峯'}],
+                                                            children: [
+                                                                { id: 'gen8-feng-1', name: '李怡霈', branchName: '大房', gender: '男', father: '李宗峯', mother: '林佑美', spousesText: '', spouses:[], children: [], collapsed: true},
+                                                                { id: 'gen8-feng-2', name: '李怡承', branchName: '二房', gender: '男', father: '李宗峯', mother: '林佑美', spousesText: '', spouses:[], children: [], collapsed: true},
+                                                                { id: 'gen8-feng-3', name: '李怡欣', branchName: '長女', gender: '女', father: '李宗峯', mother: '林佑美', spousesText: '', spouses:[], children: [], collapsed: true}
+                                                            ],
+                                                            collapsed: true
+                                                        },
+                                                    ],
+                                                    collapsed: true
+                                                },
+                                                { id: 'gen6-yuh-3', name: '李瑞銘', branchName: '三房', gender: '男', father: '李懷玉', mother: '李陳雪霞', spousesText: '平實', 
+                                                    spouses: [{id: 's-gen6-yuh-3', name: '平實', gender: '女', spousesText: '李瑞銘'}],
+                                                    children: [
+                                                        { id: 'gen7-ming-1', name: '李欣嘉', branchName: '長女', gender: '女', father: '李瑞銘', mother: '平實', spousesText: '未知', spouses: [{id: 's-gen7-ming-1', name: '未知', gender: '男', bio: '女婿', spousesText: '李欣嘉'}], children: [], collapsed: true }
+                                                    ],
+                                                    collapsed: true
+                                                },
+                                                { id: 'gen6-yuh-4', name: '李秋子', branchName: '長女', gender: '女', father: '李懷玉', mother: '李陳雪霞', spousesText: '未知', spouses: [{id: 's-gen6-yuh-4', name: '未知', gender: '男', bio: '女婿', spousesText: '李秋子'}], children: [], collapsed: true },
+                                                { id: 'gen6-yuh-5', name: '李秀珠', branchName: '次女', gender: '女', father: '李懷玉', mother: '李陳雪霞', spousesText: '何鎰塘', spouses: [{id: 's-gen6-yuh-5', name: '何鎰塘', gender: '男', bio: '女婿', spousesText: '李秀珠'}], children: [], collapsed: true }
+                                            ],
+                                            collapsed: true 
+                                        },
+                                        { 
+                                            id: 'child-of-likun-2', name: '李懷德', branchName: '二房', gender: '男', father: '李坤', mother: '李林皮', spousesText: '張秀嬌,張隨', 
+                                            spouses: [{id: 's-ld-1', name: '張秀嬌', gender: '女', spousesText: '李懷德'}, {id: 's-ld-2', name: '張隨', gender: '女', spousesText: '李懷德'}], 
+                                            children: [
+                                                { id: 'gen6-teh-1', name: '李勇陞', branchName: '大房', gender: '男', father: '李懷德', mother: '張隨', spousesText: '未知', spouses: [{id: 's-gen6-teh-1', name: '未知', gender: '女', spousesText: '李勇陞'}], children: [], collapsed: true },
+                                                { id: 'gen6-teh-2', name: '李淑貞', branchName: '長女', gender: '女', father: '李懷德', mother: '張隨', spousesText: '未知', spouses: [{id: 's-gen6-teh-2', name: '未知', gender: '男', bio: '女婿', spousesText: '李淑貞'}], children: [], collapsed: true },
+                                                { id: 'gen6-teh-3', name: '李淑卿', branchName: '次女', gender: '女', bio: '懷義給', father: '李懷德', mother: '張隨', spousesText: '未知', spouses: [{id: 's-gen6-teh-3', name: '未知', gender: '男', bio: '女婿', spousesText: '李淑卿'}], children: [], collapsed: true }
+                                            ],
+                                            collapsed: true 
+                                        },
+                                        { 
+                                            id: 'child-of-likun-3', name: '李懷安', branchName: '三房', gender: '男', father: '李坤', mother: '李林皮', spousesText: '潘笑', 
+                                            spouses: [{id: 's-la-1', name: '潘笑', gender: '女', spousesText: '李懷安'}], 
+                                            children: [
+                                                { id: 'gen6-an-1', name: '李秋霖', branchName: '大房', gender: '男', father: '李懷安', mother: '潘笑', spousesText: '未知', spouses: [{id: 's-gen6-an-1', name: '未知', gender: '女', spousesText: '李秋霖'}], children: [], collapsed: true },
+                                                { id: 'gen6-an-2', name: '李', branchName: '二房', gender: '男', father: '李懷安', mother: '潘笑', spousesText: '未知', spouses: [{id: 's-gen6-an-2', name: '未知', gender: '女', spousesText: '李'}], children: [], collapsed: true },
+                                                { id: 'gen6-an-3', name: '李秀夏', branchName: '長女', gender: '女', father: '李懷安', mother: '潘笑', spousesText: '未知', spouses: [{id: 's-gen6-an-3', name: '未知', gender: '男', bio: '女婿', spousesText: '李秀夏'}], children: [], collapsed: true },
+                                                { id: 'gen6-an-4', name: '李秀琴', branchName: '次女', gender: '女', father: '李懷安', mother: '潘笑', spousesText: '未知', spouses: [{id: 's-gen6-an-4', name: '未知', gender: '男', bio: '女婿', spousesText: '李秀琴'}], children: [], collapsed: true },
+                                                { id: 'gen6-an-5', name: '李秀卿', branchName: '三女', gender: '女', father: '李懷安', mother: '潘笑', spousesText: '未知', spouses: [{id: 's-gen6-an-5', name: '未知', gender: '男', bio: '女婿', spousesText: '李秀卿'}], children: [], collapsed: true }
+                                            ],
+                                            collapsed: true 
+                                        },
+                                        { 
+                                            id: 'child-of-likun-4', name: '李懷義', branchName: '四房', gender: '男', father: '李坤', mother: '李林皮', spousesText: '賴繡鳳', 
+                                            spouses: [{id: 's-ly-1', name: '賴繡鳳', gender: '女', spousesText: '李懷義'}],
+                                            children: [
+                                                { id: 'gen6-yi-1', name: '李俊彥', branchName: '大房', gender: '男', father: '李懷義', mother: '賴繡鳳', spousesText: '未知', spouses: [{id: 's-gen6-yi-1', name: '未知', gender: '女', spousesText: '李俊彥'}], children: [], collapsed: true },
+                                                { id: 'gen6-yi-2', name: '李育振', branchName: '二房', gender: '男', father: '李懷義', mother: '賴繡鳳', spousesText: '未知', spouses: [{id: 's-gen6-yi-2', name: '未知', gender: '女', spousesText: '李育振'}], children: [], collapsed: true },
+                                                { id: 'gen6-yi-3', name: '李淑芬', branchName: '長女', gender: '女', father: '李懷義', mother: '賴繡鳳', spousesText: '未知', spouses: [{id: 's-gen6-yi-3', name: '未知', gender: '男', bio: '女婿', spousesText: '李淑芬'}], children: [], collapsed: true },
+                                                { id: 'gen6-yi-4', name: '李淑芳', branchName: '次女', gender: '女', father: '李懷義', mother: '賴繡鳳', spousesText: '未知', spouses: [{id: 's-gen6-yi-4', name: '未知', gender: '男', bio: '女婿', spousesText: '李淑芳'}], children: [], collapsed: true },
+                                                { id: 'gen6-yi-5', name: '未知', branchName: '三女', gender: '女', father: '李懷義', mother: '賴繡鳳', spousesText: '未知', spouses: [{id: 's-gen6-yi-5', name: '未知', gender: '男', bio: '女婿', spousesText: '未知'}], children: [], collapsed: true },
+                                                { id: 'gen6-yi-6', name: '李淑玲', branchName: '四女', gender: '女', father: '李懷義', mother: '賴繡鳳', spousesText: '未知', spouses: [{id: 's-gen6-yi-6', name: '未知', gender: '男', bio: '女婿', spousesText: '李淑玲'}], children: [], collapsed: true },
+                                                { id: 'gen6-yi-7', name: '李淑真', branchName: '五女', gender: '女', father: '李懷義', mother: '賴繡鳳', spousesText: '未知', spouses: [{id: 's-gen6-yi-7', name: '未知', gender: '男', bio: '女婿', spousesText: '李淑真'}], children: [], collapsed: true }
+                                            ],
+                                            collapsed: true 
+                                        },
+                                        { 
+                                            id: 'child-of-likun-5', name: '李懷裕', branchName: '五房', gender: '男', father: '李坤', mother: '李林皮', spousesText: '林英子',
+                                            spouses: [{id: 's-lyu-1', name: '林英子', gender: '女', spousesText: '李懷裕'}], 
+                                            children: [
+                                                { id: 'gen6-yu-1', name: '李俊龍', branchName: '大房', gender: '男', father: '李懷裕', mother: '林英子', spousesText: '未知', spouses: [{id: 's-gen6-yu-1', name: '未知', gender: '女', spousesText: '李俊龍'}], children: [], collapsed: true },
+                                                { id: 'gen6-yu-2', name: '李庭逸', branchName: '二房', gender: '男', father: '李懷裕', mother: '林英子', spousesText: '未知', spouses: [{id: 's-gen6-yu-2', name: '未知', gender: '女', spousesText: '李庭逸'}], children: [], collapsed: true },
+                                                { id: 'gen6-yu-3', name: '李宜螢', branchName: '長女', gender: '女', father: '李懷裕', mother: '林英子', spousesText: '未知', spouses: [{id: 's-gen6-yu-3', name: '未知', gender: '男', bio: '女婿', spousesText: '李宜螢'}], children: [], collapsed: true },
+                                                { id: 'gen6-yu-4', name: '李亮儀', branchName: '次女', gender: '女', father: '李懷裕', mother: '林英子', spousesText: '未知', spouses: [{id: 's-gen6-yu-4', name: '未知', gender: '男', bio: '女婿', spousesText: '李亮儀'}], children: [], collapsed: true },
+                                                { id: 'gen6-yu-5', name: '李怡蓉', branchName: '三女', gender: '女', father: '李懷裕', mother: '林英子', spousesText: '未知', spouses: [{id: 's-gen6-yu-5', name: '未知', gender: '男', bio: '女婿', spousesText: '李怡蓉'}], children: [], collapsed: true }
+                                            ],
+                                            collapsed: true 
+                                        },
+                                        { 
+                                            id: 'child-of-likun-6', name: '李懷榮', branchName: '六房', gender: '男', father: '李坤', mother: '李林皮', spousesText: '蔡銘芳',
+                                            spouses: [{id: 's-lr-1', name: '蔡銘芳', gender: '女', spousesText: '李懷榮'}], 
+                                            children: [
+                                                { id: 'gen6-rong-1', name: '李偉誠', branchName: '大房', gender: '男', father: '李懷榮', mother: '蔡銘芳', spousesText: '未知', spouses: [{id: 's-gen6-rong-1', name: '未知', gender: '女', spousesText: '李偉誠'}], children: [], collapsed: true },
+                                                { id: 'gen6-rong-2', name: '李愛鈴', branchName: '長女', gender: '女', father: '李懷榮', mother: '蔡銘芳', spousesText: '未知', spouses: [{id: 's-gen6-rong-2', name: '未知', gender: '男', bio: '女婿', spousesText: '李愛鈴'}], children: [], collapsed: true }
+                                            ],
+                                            collapsed: true 
+                                        },
+                                        { 
+                                            id: 'child-of-likun-7', name: '李懷山', branchName: '七房', gender: '男', father: '李坤', mother: '李林皮', spousesText: '龔郁江',
+                                            spouses: [{id: 's-ls-1', name: '龔郁江', gender: '女', spousesText: '李懷山'}],
+                                            children: [
+                                                { id: 'gen6-shan-1', name: '李薏茹', branchName: '長女', gender: '女', father: '李懷山', mother: '龔郁江', spousesText: '未知', spouses: [{id: 's-gen6-shan-1', name: '未知', gender: '男', bio: '女婿', spousesText: '李薏茹'}], children: [], collapsed: true }
+                                            ],
+                                            collapsed: true 
+                                        },
+                                        { id: 'child-of-likun-8', name: '李雪娥', branchName: '長女', gender: '女', father: '李坤', mother: '李林皮', spouses: [{id: 's-le-1', name: '羅清崑', gender: '男', bio: '女婿', spousesText: '李雪娥'}], children: [], collapsed: true, spousesText: '羅清崑' },
+                                        { id: 'child-of-likun-9', name: '馬玉英', branchName: '次女', gender: '女', bio: '送人當養女', father: '李坤', mother: '李林皮', spouses: [{id: 's-my-1', name: '白謄煌', gender: '男', bio: '女婿', spousesText: '馬玉英'}], children: [], collapsed: true, spousesText: '白謄煌' }
+                                    ],
+                                    collapsed: true
+                                },
+                                {
+                                    id: 'root-3-1-2', name: '李虎觀', branchName: '二房', gender: '男', father: '李永綏', mother: '李林纏', 
+                                    spousesText: '',
+                                    spouses: [],
+                                    bio: '未婚亡故',
+                                    children: [],
+                                    collapsed: true
+                                }
+                            ],
+                            collapsed: true
+                        }
+                    ], 
+                    collapsed: true 
+                }
+            ]
+        };
+        // Global replace for character correction
+        let jsonString = JSON.stringify(root);
+        jsonString = jsonString.replace(/峰/g, '峯');
+        root = JSON.parse(jsonString);
+        
+        updateStatusByGeneration(root);
+        return root;
+    }
+
+    const defaultData = { 
+        history: [{ 
+            timestamp: new Date().toISOString(), 
+            action: '初始建立', 
+            data: { 
+                tree: generateDefaultTree(),
+                users: [
+                    {user: 'root', pass: 'root', displayName: '工程管理員'},
+                    {user: 'admin', pass: 'password', displayName: '最高管理員'},
+                    {user: '0', pass: '0', displayName: '測試人員'},
+                    // --- 需求 #5: 在此下方加入新帳號 ---
+                    {user: 'hsin', pass: '891216', displayName: '李怡欣'},
+                    {user: 'shin', pass: '891216', displayName: '李怡欣'},
+                    {user: 'jason', pass: '950624', displayName: '李怡承'},
+                    {user: 'uq3333', pass: '590215', displayName: '李宗峯'},
+                    {user: 'amy', pass: '621008', displayName: '林佑美'}
+                ],
+                timelineEvents: [
+                    {id: 3, date: '1700-01-01', title: '祖籍', description: '漳州府永定線應（田）德軒社'},
+                    {id: 2, date: '1800-01-01', title: '遷徙', description: '來台祖先在嘉義市竹圍仔墓碑上刻「隴 崗」'},
+                    {id: 1, date: '2020-01-01', title: '家族首次線上化', description: '家族族譜首次數位化，方便後代子孫查閱。'}
+                ],
+                photoGallery: [],
+                comments: [
+                    { id: Date.now(), author: '系統管理員', timestamp: new Date().toISOString(), content: '歡迎來到家族留言板！'},
+                ],
+                announcements: [
+                    { id: 1, date: '2025-08-27', content: '家譜系統 v3.7 已上線，新增獨立登入頁面並修正多項功能，詳情請見版本更新資訊。'},
+                ],
+                changelog: [
+                    { id: 1, version: '3.7', date: '2025-08-27', changes: ['新增獨立登入頁面與對應邏輯', '修正多項輩分關係計算錯誤', '實作可互動的日曆選擇器', '調整主要按鈕外觀並縮小尺寸', '還原 +/- 收合按鈕為舊版樣式', '新增多組預設使用者帳號', '全局更正「峯」字', '更新成員墓地資訊'] },
+                    { id: 2, version: '3.6', date: '2025-08-21', changes: ['實作「家族時間軸」與「照片藝廊」功能', '實作「重要紀念日」功能', '美化多組功能按鈕樣式'] }
+                ],
+                version: '3.7.0.0'
+            }
+        }], 
+        currentIndex: 0 
+    };
+
+    function loadData() {
+        const dataElement = document.getElementById('family-data');
+        const embeddedData = dataElement.textContent.trim();
+        if (embeddedData) {
+            try {
+                const parsed = JSON.parse(embeddedData);
+                if (parsed.history && parsed.history.every(h => h.data.tree && h.data.users)) {
+                    parsed.history.forEach(h => {
+                        if (!h.data.timelineEvents) h.data.timelineEvents = [];
+                        if (!h.data.photoGallery) h.data.photoGallery = [];
+                        if (!h.data.comments) h.data.comments = [{ id: Date.now(), author: '系統', timestamp: new Date().toISOString(), content: '留言板功能已啟用。'}];
+                        if (!h.data.announcements) h.data.announcements = [{ id: 1, date: '2025-08-21', content: '公告功能已啟用。'}];
+                        if (!h.data.changelog) h.data.changelog = defaultData.history[0].data.changelog;
+                        if (h.data.changelog && !h.data.changelog.every(c => c.id)) {
+                             h.data.changelog.forEach((c, i) => c.id = c.id || Date.now() + i);
+                        }
+                        if (!h.data.version || !h.data.version.includes('.')) h.data.version = '3.4.0.0'; 
+                    });
+                    historyStack = parsed.history.map(item => ({...item, timestamp: new Date(item.timestamp)}));
+                    currentHistoryIndex = parsed.currentIndex;
+                    logDebug("成功從 HTML 嵌入的資料載入", historyStack.length, "筆歷史紀錄");
+                } else {
+                     throw new Error("Data structure mismatch");
+                }
+            } catch (e) {
+                console.error("無法解析嵌入的資料或結構不符，將使用預設資料。", e);
+                loadDefaultData();
+            }
+        } else {
+            logDebug("HTML 中無嵌入資料，將使用預設資料");
+            loadDefaultData();
+        }
+    }
+    
+    function loadDefaultData() {
+        const defaultState = JSON.parse(JSON.stringify(defaultData));
+        historyStack = defaultState.history.map(item => ({...item, timestamp: new Date(item.timestamp)}));
+        currentHistoryIndex = 0;
+        logDebug("已載入預設資料");
+    }
+
+// 【新增】完整 UI 刷新函式
+    function fullUIRefresh() {
+        logDebug(`UI 刷新，當前歷史索引: ${currentHistoryIndex}`);
+        updateVersionDisplay();
+        renderTree();
+        populateNameSelect();
+        // 如果未來有更多需要刷新的部分，可以加在這裡
+    }
+    
+    // 【新增】上一步 (Undo) 函式
+    function undo() {
+        if (currentHistoryIndex > 0) {
+            currentHistoryIndex--;
+            fullUIRefresh();
+            logDebug("執行上一步");
+        } else {
+            logDebug("無法再執行上一步，已在最舊的歷史紀錄");
+        }
+        updateUndoRedoButtons();
+    }
+
+    // 【新增】下一步 (Redo) 函式
+    function redo() {
+        if (currentHistoryIndex < historyStack.length - 1) {
+            currentHistoryIndex++;
+            fullUIRefresh();
+            logDebug("執行下一步");
+        } else {
+            logDebug("無法再執行下一步，已在最新的歷史紀錄");
+        }
+        updateUndoRedoButtons();
+    }
+
+    function recordHistory(action, options = { incrementVersion: false }) {
+        if (!isEditor) return;
+        
+        const currentState = JSON.parse(JSON.stringify(historyStack[currentHistoryIndex].data));
+
+        if (options.incrementVersion) {
+            let parts = (currentState.version || '3.7.0.0').split('.').map(Number);
+            while (parts.length < 4) { parts.push(0); }
+            parts[3]++;
+            currentState.version = parts.join('.');
+        }
+
+        historyStack = historyStack.slice(0, currentHistoryIndex + 1);
+        const newRecord = {
+            timestamp: new Date(),
+            action: action,
+            data: currentState
+        };
+        historyStack.push(newRecord);
+        currentHistoryIndex++;
+        logDebug(`記錄新操作: "${action}". 當前索引: ${currentHistoryIndex}`);
+        updateVersionDisplay();
+        updateUndoRedoButtons(); // 【新增這一行】
+    }
+
+    // --- Rendering ---
+    const treeRoot = document.getElementById('family-tree-root');
+    function renderTree(treeData) {
+        logDebug("開始渲染家譜樹...");
+        const scrollLeft = treeContainer.scrollLeft;
+        const scrollTop = treeContainer.scrollTop;
+
+        treeRoot.innerHTML = '';
+        if (historyStack.length === 0) return;
+        
+        const dataToRender = treeData || historyStack[currentHistoryIndex].data.tree;
+        const rootUl = document.createElement('ul');
+        if (dataToRender) {
+            rootUl.appendChild(createNodeElement(dataToRender, 1));
+        }
+        treeRoot.appendChild(rootUl);
+        applyZoom();
+
+        treeContainer.scrollLeft = scrollLeft;
+        treeContainer.scrollTop = scrollTop;
+
+        logDebug("家譜樹渲染完畢");
+    }
+
+    function getGenderIcon(gender) {
+        if (gender === '男') return '♂';
+        if (gender === '女') return '♀';
+        return '❓';
+    }
+
+    function createNodeElement(person, generation) {
+        const li = document.createElement('li');
+        const familyGroup = document.createElement('div');
+        familyGroup.className = 'family-group';
+
+        familyGroup.appendChild(createPersonDiv(person, generation, false));
+        (person.spouses || []).forEach(spouse => {
+            familyGroup.appendChild(createPersonDiv(spouse, generation, true));
+        });
+        
+        if (person.children && person.children.length > 0) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'node-btn toggle-btn li-toggle-btn';
+            toggleBtn.dataset.action = 'toggle';
+            toggleBtn.dataset.id = person.id;
+            toggleBtn.title = person.collapsed ? '展開' : '收合';
+            toggleBtn.textContent = person.collapsed ? '+' : '–';
+            // 需求 #4: 將 +/- 按鈕移回 family-group 內部
+            familyGroup.appendChild(toggleBtn);
+        }
+
+        li.appendChild(familyGroup);
+        
+        if (person.children && person.children.length > 0 && !person.collapsed) {
+            const childrenUl = document.createElement('ul');
+            person.children.forEach(child => childrenUl.appendChild(createNodeElement(child, generation + 1)));
+            li.appendChild(childrenUl);
+        }
+        return li;
+    }
+
+    function createPersonDiv(person, generation, isSpouse) {
+        const nodeDiv = document.createElement('div');
+        nodeDiv.className = `node ${person.gender === '男' ? 'male' : person.gender === '女' ? 'female' : 'unknown'} ${person.status === '歿' ? 'deceased' : ''}`;
+        nodeDiv.dataset.id = person.id;
+        nodeDiv.dataset.generation = generation;
+        
+        const editorButtons = `
+            <button class="node-btn edit-btn editor-only" data-action="edit" title="修改成員">✎</button>
+            ${person.id !== 'root' ? `<button class="node-btn delete-btn editor-only" data-action="delete" title="刪除成員">🗑️</button>` : ''}
+            ${!isSpouse ? `<button class="node-btn add-btn editor-only" data-action="add" title="新增後代">⊕</button>` : ''}
+            ${!isSpouse ? `<button class="node-btn add-spouse-node-btn editor-only" data-action="add-spouse" title="新增配偶">+👤</button>` : ''}
+        `;
+
+        nodeDiv.innerHTML = `
+            <div class="node-main">
+                <div class="info-area" data-action="view">
+                    <span class="name"><span class="gender-icon">${getGenderIcon(person.gender)}</span>${person.name}</span>
+                </div>
+                <div class="node-buttons">
+                    ${editorButtons}
+                </div>
+            </div>`;
+        return nodeDiv;
+    }
+    
+    function setAuthMode(authData) {
+        if (authData && authData.isLoggedIn) {
+            isEditor = true;
+            isAdmin = authData.isAdmin;
+            isSysAdmin = authData.isSysAdmin;
+            
+            document.getElementById('guest-view').style.display = 'none';
+            document.getElementById('user-view').style.display = 'inline';
+            document.getElementById('user-display-name').textContent = authData.displayName;
+
+            if (isSysAdmin) {
+                document.getElementById('status-indicator').textContent = '工程管理員模式';
+                document.getElementById('status-indicator').className = 'editor';
+            } else if (isAdmin) {
+                document.getElementById('status-indicator').textContent = '最高管理員模式';
+                document.getElementById('status-indicator').className = 'editor';
+            } else {
+                document.getElementById('status-indicator').textContent = '編輯模式';
+                document.getElementById('status-indicator').className = 'editor';
+            }
+        } else {
+            isEditor = false;
+            isAdmin = false;
+            isSysAdmin = false;
+            document.getElementById('guest-view').style.display = 'inline';
+            document.getElementById('user-view').style.display = 'none';
+            document.getElementById('status-indicator').textContent = '訪客模式 (唯讀)';
+            document.getElementById('status-indicator').className = 'visitor';
+        }
+        
+        document.body.dataset.isEditor = isEditor;
+        document.body.dataset.isAdmin = isAdmin;
+        document.body.dataset.isSysadmin = isSysAdmin;
+        
+        logDebug(`權限模式已設定: isEditor=${isEditor}, isAdmin=${isAdmin}, isSysAdmin=${isSysAdmin}`);
+    }
+
+    const modals = {
+        form: document.getElementById('formModal'),
+        history: document.getElementById('historyModal'),
+        confirm: document.getElementById('confirmModal'),
+        help: document.getElementById('helpModal'),
+        account: document.getElementById('accountModal'),
+        accountEdit: document.getElementById('accountEditModal'),
+        personDetail: document.getElementById('personDetailModal'),
+        contact: document.getElementById('contactModal'),
+        forgotPassword: document.getElementById('forgotPasswordModal'),
+        passwordResult: document.getElementById('passwordResultModal'),
+        dashboard: document.getElementById('dashboardModal'),
+        relationship: document.getElementById('relationshipModal'),
+        anniversary: document.getElementById('anniversaryModal'),
+        timeline: document.getElementById('timelineModal'),
+        timelineForm: document.getElementById('timelineFormModal'),
+        gallery: document.getElementById('galleryModal'),
+        photoForm: document.getElementById('photoFormModal'),
+        lightbox: document.getElementById('lightbox'),
+        map: document.getElementById('mapModal'),
+        comment: document.getElementById('commentModal'),
+        changelog: document.getElementById('changelogModal'),
+        changelogForm: document.getElementById('changelogFormModal'),
+        crop: document.getElementById('cropModal'),
+    };
+    const form = document.getElementById('person-form');
+    const treeContainer = document.querySelector('.tree-container');
+
+    treeContainer.addEventListener('click', (e) => {
+        const actionTarget = e.target.closest('[data-action]');
+        if (!actionTarget) return;
+
+        const action = actionTarget.dataset.action;
+
+        if (action === 'toggle') {
+            const personId = actionTarget.dataset.id;
+            const currentTreeData = historyStack[currentHistoryIndex].data.tree;
+            const person = findPersonById(currentTreeData, personId);
+            if (person) {
+                person.collapsed = !person.collapsed;
+                logDebug(`成員 ${person.name} (${personId}) 的節點已 ${person.collapsed ? '收合' : '展開'}`);
+                renderTree();
+                setTimeout(() => {
+                    const toggledBtn = document.querySelector(`.li-toggle-btn[data-id="${personId}"]`);
+                    if (toggledBtn) {
+                        toggledBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    }
+                }, 100);
+            }
+            return;
+        }
+        
+        const nodeDiv = actionTarget.closest('.node');
+        if (!nodeDiv) return;
+
+        const personId = nodeDiv.dataset.id;
+        const currentTreeData = historyStack[currentHistoryIndex].data.tree;
+        const findResult = findPersonAndParentById(currentTreeData, personId);
+        if (!findResult) return;
+        const { person } = findResult;
+
+        logDebug(`在成員 ${person.name} (${personId}) 節點上觸發了動作: ${action}`);
+
+        switch (action) {
+            case 'add': openFormModal({ parentId: personId }); break;
+            case 'add-spouse': openFormModal({ spouseOfId: personId }); break;
+            case 'edit': openFormModal({ personToEdit: person }); break;
+            case 'delete':
+                document.getElementById('confirm-text').textContent = `確定要刪除「${person.name}」${person.children && person.children.length > 0 ? '及其所有後代' : ''}嗎？`;
+                modals.confirm.style.display = 'block';
+                document.getElementById('confirm-ok-btn').onclick = () => {
+                    deletePersonRecursive(currentTreeData, personId);
+                    recordHistory(`刪除了 ${person.name}`, { incrementVersion: true });
+                    modals.confirm.style.display = 'none';
+                };
+                break;
+            case 'view':
+                const detailList = document.getElementById('detail-list');
+                document.getElementById('detail-name').textContent = person.name;
+                
+                const detailImage = document.getElementById('detail-image');
+                if(person.image){
+                    detailImage.src = person.image;
+                    detailImage.style.display = 'block';
+                } else {
+                    detailImage.style.display = 'none';
+                }
+                
+                let bioContent = person.bio ? `
+                    <li class="bio-content"><strong>生平簡介:</strong></li>
+                    <li class="bio-content">${person.bio}</li>
+                ` : `<li><strong>生平簡介:</strong> 無</li>`;
+
+                detailList.innerHTML = `
+                    <li><strong>第 ${nodeDiv.dataset.generation} 代</strong></li>
+                    ${person.branchName ? `<li><strong>房別/稱謂:</strong> ${person.branchName}</li>` : ''}
+                    <li><strong>性別:</strong> ${person.gender || '不詳'}</li>
+                    <li><strong>存歿:</strong> ${person.status || '不詳'}</li>
+                    <li><strong>生日:</strong> ${person.birth || '不詳'}</li>
+                    ${person.deathday ? `<li><strong>忌日:</strong> ${person.deathday}</li>` : ''}
+                    ${person.location ? `<li><strong>地址:</strong> ${person.location}</li>` : ''}
+                    ${person.cemetery ? `<li><strong>墓地:</strong> ${person.cemetery}</li>` : ''}
+                    <li><strong>父親:</strong> ${person.father || '不詳'}</li>
+                    <li><strong>母親:</strong> ${person.mother || '不詳'}</li>
+                    <li><strong>配偶:</strong> ${person.spousesText || '無'}</li>
+                    ${bioContent}
+                    <li class="editor-only" style="padding-top: 15px;"><button class="header-btn small-blue" data-edit-id="${person.id}">修改此人資料</button></li>
+                `;
+                modals.personDetail.style.display = 'block';
+                break;
+        }
+    });
+
+    modals.personDetail.addEventListener('click', (e) => {
+        if (e.target.dataset.editId) {
+            const personId = e.target.dataset.editId;
+            const currentTreeData = historyStack[currentHistoryIndex].data.tree;
+            const findResult = findPersonAndParentById(currentTreeData, personId);
+            if (findResult) {
+                modals.personDetail.style.display = 'none';
+                openFormModal({ personToEdit: findResult.person });
+            }
+        }
+    });
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const personId = document.getElementById('personId').value;
+        const parentId = document.getElementById('parentId').value;
+        const spouseOfId = document.getElementById('formModal').dataset.spouseOfId;
+        const currentTreeData = historyStack[currentHistoryIndex].data.tree;
+        
+        const formData = {
+            name: document.getElementById('name').value, 
+            branchName: document.getElementById('branchName').value,
+            gender: document.getElementById('gender').value, 
+            status: document.getElementById('status').value,
+            cemetery: document.getElementById('cemetery').value,
+            birth: document.getElementById('birth').value, 
+            deathday: document.getElementById('deathday').value,
+            image: document.getElementById('image-data').value,
+            bio: document.getElementById('bio-editor').innerHTML,
+            father: document.getElementById('father').value,
+            mother: document.getElementById('mother').value,
+            spousesText: document.getElementById('spousesText').value,
+            location: document.getElementById('location').value,
+        };
+
+        logDebug("表單提交，資料:", formData);
+
+        let actionText = '';
+        if (personId) {
+            const { person: personToEdit } = findPersonAndParentById(currentTreeData, personId);
+            const oldSpousesText = personToEdit.spousesText || '';
+            
+            Object.assign(personToEdit, formData);
+            
+            synchronizeSpouseObjects(personToEdit, currentTreeData);
+            synchronizeSpousesText(personToEdit, oldSpousesText, currentTreeData);
+            
+            actionText = `修改了 ${personToEdit.name} 的資料`;
+
+        } else if (parentId) {
+            const parent = findPersonById(currentTreeData, parentId);
+            const newPerson = { ...formData, id: Date.now().toString(), children: [], spouses: [] };
+            if (!parent.children) parent.children = [];
+            parent.children.push(newPerson);
+            parent.children.sort((a, b) => getBranchRank(a.branchName) - getBranchRank(b.branchName));
+            synchronizeSpouseObjects(newPerson, currentTreeData);
+            synchronizeSpousesText(newPerson, '', currentTreeData);
+            actionText = `為 ${parent.name} 新增了後代 ${newPerson.name}`;
+        } else if (spouseOfId) {
+            const mainPerson = findPersonById(currentTreeData, spouseOfId);
+            const newSpouse = { ...formData, id: Date.now().toString() };
+            if (!mainPerson.spouses) mainPerson.spouses = [];
+            mainPerson.spouses.push(newSpouse);
+            let mainSpouses = (mainPerson.spousesText || '').split(',').map(s => s.trim()).filter(Boolean);
+            if (!mainSpouses.includes(newSpouse.name)) {
+                mainSpouses.push(newSpouse.name);
+                mainPerson.spousesText = mainSpouses.join(',');
+            }
+            actionText = `為 ${mainPerson.name} 新增了配偶 ${newSpouse.name}`;
+        }
+        recordHistory(actionText, { incrementVersion: true });
+        renderTree(); // <<<<<<<<<<< 在這裡加上這一行
+        modals.form.style.display = 'none';
+        populateNameSelect();
+    });
+    
+    document.getElementById('image-upload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            modals.crop.style.display = 'block';
+            const image = document.getElementById('crop-image-preview');
+            image.src = event.target.result;
+            
+            if (cropper) {
+                cropper.destroy();
+            }
+            cropper = new Cropper(image, {
+                aspectRatio: 1,
+                viewMode: 1,
+                background: false,
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('crop-confirm-btn').addEventListener('click', () => {
+        if (cropper) {
+            const croppedCanvas = cropper.getCroppedCanvas({
+                width: 256,
+                height: 256,
+            });
+            const dataUrl = croppedCanvas.toDataURL();
+            document.getElementById('image-data').value = dataUrl;
+            document.getElementById('image-preview').src = dataUrl;
+            document.getElementById('image-preview').style.display = 'block';
+            cropper.destroy();
+            cropper = null;
+            modals.crop.style.display = 'none';
+            document.getElementById('image-upload').value = '';
+        }
+    });
+
+    // 【修改後版本】請用這段貼上
+    document.getElementById('show-history-btn').addEventListener('click', () => {
+        const historyList = document.getElementById('history-list');
+        historyList.innerHTML = '';
+        [...historyStack].reverse().forEach((item, revIndex) => {
+            const originalIndex = historyStack.length - 1 - revIndex;
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="history-item-info">
+                    <strong>${item.action}</strong>
+                    <div class="time">${item.timestamp.toLocaleString('zh-TW')}</div>
+                </div>
+                ${originalIndex !== currentHistoryIndex ? `<button class="restore-btn" data-index="${originalIndex}">預覽此版本</button>` : '<span>(目前狀態)</span>'}
+            `;
+            historyList.appendChild(li);
+        });
+        modals.history.style.display = 'block';
+        updateUndoRedoButtons(); // 主要是在結尾新增了這一行
+    });
+
+    // 【修改】
+    document.getElementById('revert-to-initial-btn').addEventListener('click', () => {
+        modals.confirm.style.display = 'block';
+        document.getElementById('confirm-text').textContent = '確定要將所有資料還原到最原始的狀態嗎？此操作無法復原。';
+        document.getElementById('confirm-ok-btn').onclick = () => {
+            currentHistoryIndex = 0;
+            fullUIRefresh(); // 直接跳轉並刷新UI
+            logDebug("已還原到最初版本");
+            modals.confirm.style.display = 'none';
+            modals.history.style.display = 'none';
+        };
+    });
+
+    // 【修改】
+    document.getElementById('history-list').addEventListener('click', (e) => {
+        if (e.target.classList.contains('restore-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            currentHistoryIndex = index;
+            fullUIRefresh(); // 直接跳轉並刷新UI
+            logDebug(`已還原到索引 ${index} 的歷史狀態`);
+            modals.history.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('save-html-btn').addEventListener('click', () => {
+        logDebug("準備另存新檔...");
+        const currentFullState = {
+            history: historyStack,
+            currentIndex: currentHistoryIndex
+        };
+        const jsonString = JSON.stringify(currentFullState);
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(document.documentElement.outerHTML, 'text/html');
+        
+        const scriptTag = doc.getElementById('family-data');
+        scriptTag.textContent = jsonString;
+
+        const newHtml = `<!DOCTYPE html>\n` + doc.documentElement.outerHTML;
+
+        const blob = new Blob([newHtml], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        const version = historyStack[currentHistoryIndex].data.version || '3.7.0.0';
+        a.download = `李氏家族家譜_v${version}_${new Date().toISOString().slice(0,10)}.html`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        logDebug("新檔案已觸發下載");
+    });
+    
+    document.getElementById('login-redirect-btn').addEventListener('click', () => {
+        window.location.href = 'login.html';
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        localStorage.removeItem('authStatus');
+        setAuthMode(null);
+        window.location.href = 'login.html';
+    });
+
+    document.getElementById('show-help-btn').addEventListener('click', () => modals.help.style.display = 'block');
+    document.getElementById('contact-btn').addEventListener('click', () => modals.contact.style.display = 'block');
+    document.getElementById('manage-accounts-btn').addEventListener('click', () => {
+        renderAccountList();
+        modals.account.style.display = 'block';
+    });
+    
+    const zoomSlider = document.getElementById('zoom-slider');
+    function applyZoom() {
+        treeRoot.style.transform = `scale(${currentZoom})`;
+        zoomSlider.value = currentZoom;
+    }
+    document.getElementById('zoom-in-btn').addEventListener('click', () => {
+        currentZoom = Math.min(2, parseFloat(zoomSlider.value) + 0.1);
+        applyZoom();
+    });
+    document.getElementById('zoom-out-btn').addEventListener('click', () => {
+        currentZoom = Math.max(0.2, parseFloat(zoomSlider.value) - 0.1);
+        applyZoom();
+    });
+    zoomSlider.addEventListener('input', (e) => {
+        currentZoom = parseFloat(e.target.value);
+        applyZoom();
+    });
+
+    document.getElementById('worship-btn-fixed').addEventListener('click', () => {
+        const worshipView = document.getElementById('worship-view');
+        const deceasedListUl = document.getElementById('deceased-list-ul');
+        deceasedListUl.innerHTML = '';
+        
+        const deceasedList = [];
+        function findDeceased(node) {
+            if (!node) return;
+            if (node.status === '歿') { deceasedList.push({id: node.id, name: node.name}); }
+            (node.spouses || []).forEach(spouse => {
+                if (spouse.status === '歿') { deceasedList.push({id: spouse.id, name: spouse.name}); }
+            });
+            (node.children || []).forEach(child => findDeceased(child));
+        }
+        
+        findDeceased(historyStack[currentHistoryIndex].data.tree);
+
+        deceasedList.forEach(person => {
+            const li = document.createElement('li');
+            li.textContent = person.name;
+            li.dataset.id = person.id;
+            deceasedListUl.appendChild(li);
+        });
+        
+        document.getElementById('worship-target-name').textContent = '請選擇祭拜對象';
+        document.getElementById('worship-target-name').style.display = 'block';
+        document.getElementById('worship-details').style.display = 'none';
+        worshipView.style.display = 'block';
+    });
+    document.getElementById('end-worship-btn').addEventListener('click', () => {
+        document.getElementById('worship-view').style.display = 'none';
+    });
+    document.getElementById('deceased-list-ul').addEventListener('click', (e) => {
+        if(e.target.tagName === 'LI') {
+            const personId = e.target.dataset.id;
+            const person = findPersonById(historyStack[currentHistoryIndex].data.tree, personId);
+            if (person) {
+                document.getElementById('worship-target-name').textContent = `祭拜 ${person.name}`;
+                const detailsDiv = document.getElementById('worship-details');
+                const imageEl = document.getElementById('worship-image');
+                const bioEl = document.getElementById('worship-bio');
+                
+                if (person.image) {
+                    imageEl.src = person.image;
+                    imageEl.style.display = 'block';
+                } else {
+                    imageEl.style.display = 'none';
+                }
+                bioEl.innerHTML = person.bio || '無生平簡介。';
+                detailsDiv.style.display = 'flex';
+            }
+        }
+    });
+
+    function triggerWorshipAnimation(type) {
+        const container = document.getElementById('offering-animation-container');
+        const el = document.createElement('div');
+        el.className = 'offering';
+        
+        switch (type) {
+            case 'fruit':
+                el.textContent = '🍎';
+                el.style.animation = 'offer-fruit 2s ease-out forwards';
+                break;
+            case 'paper':
+                el.textContent = '💰';
+                el.style.animation = 'burn-paper-new 2.5s ease-in-out forwards';
+                break;
+            case 'incense':
+                const incenseContainer = document.createElement('div');
+                incenseContainer.className = 'incense-container';
+                for(let i=0; i<3; i++) {
+                    const stick = document.createElement('div');
+                    stick.className = 'incense-stick';
+                    stick.style.transform = `rotate(${(i-1)*10}deg)`;
+                    const smoke = document.createElement('div');
+                    smoke.className = 'incense-smoke';
+                    smoke.style.animationDelay = `${i * 0.5}s`;
+                    stick.appendChild(smoke);
+                    incenseContainer.appendChild(stick);
+                }
+                container.appendChild(incenseContainer);
+                setTimeout(() => container.removeChild(incenseContainer), 5000);
+                return;
+            case 'flower':
+                 el.textContent = '💐';
+                 el.style.animation = 'offer-flower 2s ease-out forwards';
+                 break;
+            case 'hands':
+                el.textContent = '🙏';
+                el.style.animation = 'offer-hands 2s ease-out forwards';
+                break;
+            default:
+                return;
+        }
+        
+        el.style.left = `${Math.random() * 60 + 20}%`;
+        container.appendChild(el);
+        setTimeout(() => { container.removeChild(el); }, 2500);
+    }
+
+    document.querySelector('.worship-controls').addEventListener('click', (e) => {
+        const target = e.target.closest('[data-worship]');
+        if (target) {
+            triggerWorshipAnimation(target.dataset.worship);
+        }
+    });
+
+    document.getElementById('add-account-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newDisplayName = document.getElementById('new-displayName').value;
+        const newUsername = document.getElementById('new-username').value;
+        const newPassword = document.getElementById('new-password').value;
+        const users = historyStack[currentHistoryIndex].data.users;
+        if (users.find(u => u.user === newUsername)) {
+            alert('此登入帳號已存在！');
+            return;
+        }
+        users.push({ user: newUsername, pass: newPassword, displayName: newDisplayName });
+        recordHistory(`新增編輯者帳號: ${newUsername}`);
+        renderAccountList();
+        e.target.reset();
+    });
+    
+    document.getElementById('edit-account-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const originalUsername = document.getElementById('edit-original-username').value;
+        const newDisplayName = document.getElementById('edit-displayName').value;
+        const newUsername = document.getElementById('edit-username').value;
+        const newPassword = document.getElementById('edit-password').value;
+        const users = historyStack[currentHistoryIndex].data.users;
+        
+        if (newUsername !== originalUsername && users.find(u => u.user === newUsername)) {
+            alert('新的登入帳號已被使用！');
+            return;
+        }
+
+        const userToEdit = users.find(u => u.user === originalUsername);
+        if (userToEdit) {
+            userToEdit.displayName = newDisplayName;
+            userToEdit.user = newUsername;
+            if (newPassword) { userToEdit.pass = newPassword; }
+            recordHistory(`修改了帳號: ${originalUsername}`);
+            renderAccountList();
+            modals.accountEdit.style.display = 'none';
+        }
+    });
+
+    document.getElementById('account-list').addEventListener('click', (e) => {
+        const users = historyStack[currentHistoryIndex].data.users;
+        if (e.target.classList.contains('delete-account-btn')) {
+            const userToDelete = e.target.dataset.user;
+            const userIndex = users.findIndex(u => u.user === userToDelete);
+            if (userIndex > -1) {
+                users.splice(userIndex, 1);
+                recordHistory(`刪除編輯者帳號: ${userToDelete}`);
+                renderAccountList();
+            }
+        }
+        if (e.target.classList.contains('edit-account-btn')) {
+            const userToEdit = users.find(u => u.user === e.target.dataset.user);
+            if (userToEdit) {
+                document.getElementById('edit-original-username').value = userToEdit.user;
+                document.getElementById('edit-displayName').value = userToEdit.displayName;
+                document.getElementById('edit-username').value = userToEdit.user;
+                document.getElementById('edit-password').value = '';
+                modals.accountEdit.style.display = 'block';
+            }
+        }
+    });
+
+    document.getElementById('filter-btn').addEventListener('click', () => {
+        const filters = {
+            name: document.getElementById('search-name').value.trim().toLowerCase(),
+            branches: Array.from(document.querySelectorAll('#branch-filter-options input:checked')).map(el => el.value),
+            genders: Array.from(document.querySelectorAll('#gender-filter-options input:checked')).map(el => el.value),
+            statuses: Array.from(document.querySelectorAll('#status-filter-options input:checked')).map(el => el.value),
+            anniversaries: Array.from(document.querySelectorAll('#anniversary-filter-options input:checked')).map(el => el.value),
+        };
+        const fullTree = JSON.parse(JSON.stringify(historyStack[currentHistoryIndex].data.tree));
+        const filteredTree = filterTree(fullTree, filters);
+        renderTree(filteredTree);
+
+        if (filters.name && filteredTree) {
+            setTimeout(() => {
+                 const personToHighlight = findFirstMatchByName(filteredTree, filters.name);
+                 if (personToHighlight) {
+                     const nodeEl = document.querySelector(`.node[data-id="${personToHighlight.id}"]`);
+                     if (nodeEl) {
+                         nodeEl.classList.add('highlight');
+                         nodeEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                         setTimeout(() => nodeEl.classList.remove('highlight'), 2500);
+                     }
+                 }
+            }, 300);
+        }
+    });
+
+    document.getElementById('name-select').addEventListener('change', (e) => {
+        const searchInput = document.getElementById('search-name');
+        searchInput.value = e.target.value;
+    });
+
+
+    document.getElementById('reset-filter-btn').addEventListener('click', () => {
+        document.getElementById('search-name').value = '';
+        document.getElementById('name-select').value = '';
+        document.querySelectorAll('#branch-filter-options input, #gender-filter-options input, #status-filter-options input, #anniversary-filter-options input').forEach(el => el.checked = false);
+        renderTree();
+    });
+
+    function renderAccountList() {
+        const accountList = document.getElementById('account-list');
+        const users = historyStack[currentHistoryIndex].data.users;
+        accountList.innerHTML = '';
+        users.forEach(u => {
+            const li = document.createElement('li');
+            li.innerHTML = `<div class="account-info">${u.displayName}<span>登入帳號: ${u.user}</span></div>`;
+            
+            const buttonsDiv = document.createElement('div');
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '修改';
+            editBtn.className = 'edit-account-btn header-btn small-blue';
+            editBtn.dataset.user = u.user;
+            
+            if (u.user === 'root' && !isSysAdmin) {} 
+            else { buttonsDiv.appendChild(editBtn); }
+
+            if ( (isSysAdmin && u.user !== 'root') || (isAdmin && u.user !== 'root' && u.user !== 'admin') ) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '刪除';
+                deleteBtn.className = 'delete-account-btn header-btn small-red';
+                deleteBtn.dataset.user = u.user;
+                buttonsDiv.appendChild(deleteBtn);
+            }
+            li.appendChild(buttonsDiv);
+            accountList.appendChild(li);
+        });
+    }
+
+    Object.values(modals).forEach(modal => {
+        modal.querySelector('.close-btn, #confirm-cancel-btn')?.addEventListener('click', () => {
+            modal.style.display = 'none';
+            if(modal.id === 'cropModal' && cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        });
+        window.addEventListener('click', (e) => { if (e.target == modal) {
+            modal.style.display = 'none';
+            if(modal.id === 'cropModal' && cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }});
+    });
+
+    function openFormModal({ parentId = null, personToEdit = null, spouseOfId = null }) {
+        form.reset();
+        document.getElementById('image-preview').style.display = 'none';
+        document.getElementById('image-preview').src = '';
+        document.getElementById('image-data').value = '';
+        
+        document.getElementById('parentId').value = parentId || '';
+        document.getElementById('formModal').dataset.spouseOfId = spouseOfId || '';
+        document.getElementById('personId').value = personToEdit ? personToEdit.id : '';
+
+        const bioEditor = document.getElementById('bio-editor');
+
+        if (personToEdit) {
+            document.getElementById('form-title').textContent = '修改成員資料';
+            bioEditor.innerHTML = personToEdit.bio || '';
+            for (const key in personToEdit) {
+                if (key === 'image') {
+                    document.getElementById('image-data').value = personToEdit[key];
+                    if (personToEdit[key]) {
+                        document.getElementById('image-preview').src = personToEdit[key];
+                        document.getElementById('image-preview').style.display = 'block';
+                    }
+                } else if (key !== 'bio' && form.elements[key]) {
+                    form.elements[key].value = personToEdit[key] || '';
+                }
+            }
+        } else if (spouseOfId) {
+            document.getElementById('form-title').textContent = '新增配偶資料';
+            bioEditor.innerHTML = '';
+        } else {
+            document.getElementById('form-title').textContent = '新增後代成員';
+            bioEditor.innerHTML = '';
+            const parent = findPersonById(historyStack[currentHistoryIndex].data.tree, parentId);
+            if (parent) {
+                document.getElementById('father').value = parent.gender === '男' ? parent.name : (parent.spouses[0]?.name || '');
+                document.getElementById('mother').value = parent.gender === '女' ? parent.name : (parent.spouses[0]?.name || '');
+            }
+        }
+        modals.form.style.display = 'block';
+    }
+
+
+    
+
+    function findPersonByName(node, name) {
+        if (!node || !name) return null;
+        const normalizedName = name.trim();
+        if (node.name.trim() === normalizedName) return node;
+        
+        if (node.spouses) {
+            for (const spouse of node.spouses) {
+                if (spouse.name.trim() === normalizedName) return spouse;
+            }
+        }
+        if (node.children) {
+            for (const child of node.children) {
+                const found = findPersonByName(child, normalizedName);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+    
+    function findFirstMatchByName(node, name) {
+        if (!node || !name) return null;
+        if (node.name.toLowerCase().includes(name)) {
+            return node;
+        }
+        if (node.children) {
+            for (const child of node.children) {
+                const found = findFirstMatchByName(child, name);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    function synchronizeSpouseObjects(person, tree) {
+        if (!person) return;
+        if (!person.spousesText) {
+            person.spouses = [];
+            return;
+        }
+        
+        const spouseNames = person.spousesText.split(',').map(s => s.trim()).filter(Boolean);
+        const newSpousesArray = [];
+
+        spouseNames.forEach(name => {
+            const existingSpouse = person.spouses?.find(s => s.name === name);
+            if (existingSpouse) {
+                newSpousesArray.push(existingSpouse);
+            } else {
+                const foundSpouseNode = findPersonByName(tree, name);
+                if (foundSpouseNode) {
+                    newSpousesArray.push({
+                        id: foundSpouseNode.id, name: foundSpouseNode.name,
+                        gender: foundSpouseNode.gender, status: foundSpouseNode.status
+                    });
+                }
+            }
+        });
+        person.spouses = newSpousesArray;
+    }
+
+
+    function synchronizeSpousesText(person, oldSpousesText, tree) {
+        const oldNames = oldSpousesText ? oldSpousesText.split(',').map(n => n.trim()).filter(Boolean) : [];
+        const newNames = person.spousesText ? person.spousesText.split(',').map(n => n.trim()).filter(Boolean) : [];
+
+        const addedNames = newNames.filter(name => !oldNames.includes(name));
+        const removedNames = oldNames.filter(name => !newNames.includes(name));
+
+        removedNames.forEach(name => {
+            const spouseNode = findPersonByName(tree, name);
+            if (spouseNode && spouseNode.spousesText) {
+                let spousePartners = spouseNode.spousesText.split(',').map(n => n.trim()).filter(Boolean);
+                spousePartners = spousePartners.filter(pName => pName !== person.name);
+                spouseNode.spousesText = spousePartners.join(',');
+            }
+        });
+
+        addedNames.forEach(name => {
+            const spouseNode = findPersonByName(tree, name);
+            if (spouseNode) {
+                let spousePartners = spouseNode.spousesText ? spouseNode.spousesText.split(',').map(n => n.trim()).filter(Boolean) : [];
+                if (!spousePartners.includes(person.name)) {
+                    spousePartners.push(person.name);
+                }
+                spouseNode.spousesText = spousePartners.join(',');
+            }
+        });
+    }
+
+    function deletePersonRecursive(node, id) {
+        if (node.spouses) {
+            const spouseIndex = node.spouses.findIndex(s => s.id === id);
+            if (spouseIndex > -1) {
+                node.spouses.splice(spouseIndex, 1);
+                return true;
+            }
+        }
+        if (node.children) {
+            const childIndex = node.children.findIndex(c => c.id === id);
+            if (childIndex > -1) {
+                node.children.splice(childIndex, 1);
+                return true;
+            }
+            for (const child of node.children) {
+                if (deletePersonRecursive(child, id)) return true;
+            }
+        }
+        return false;
+    }
+
+    function getBranchRank(branchName) {
+        if (!branchName) return 999;
+        const bn = branchName.toString().toLowerCase();
+        const map = { '長房': 1, '大房': 1, '二房': 2, '三房': 3, '四房': 4, '五房': 5, '六房': 6, '七房': 7, '長女': 101, '次女': 102, '三女': 103, '四女': 104, '五女': 105 };
+        const parsed = parseInt(bn.replace(/[^0-9]/g, ''));
+        if (!isNaN(parsed) && (bn.includes('房') || bn.includes('男'))) return parsed;
+        if (!isNaN(parsed) && bn.includes('女')) return 100 + parsed;
+        return map[branchName] || 999;
+    }
+
+    function filterTree(node, filters) {
+        if (!node) return null;
+
+        let childrenMatch = (node.children || [])
+            .map(child => filterTree(JSON.parse(JSON.stringify(child)), filters))
+            .filter(child => child !== null);
+        
+        let selfMatch = true;
+        
+        if (filters.name && !node.name.toLowerCase().includes(filters.name)) selfMatch = false;
+        if (filters.branches.length > 0) {
+            if (filters.branches.includes('other')) {
+                const definedBranches = ['長房', '二房', '三房', '四房', '五房', '六房', '七房', '長女', '次女'];
+                if (definedBranches.includes(node.branchName)) selfMatch = false;
+            } else if (!filters.branches.includes(node.branchName)) {
+                selfMatch = false;
+            }
+        }
+        if (filters.genders.length > 0 && !filters.genders.includes(node.gender || '不詳')) selfMatch = false;
+        if (filters.statuses.length > 0 && !filters.statuses.includes(node.status || '不詳')) selfMatch = false;
+        
+        if (filters.anniversaries.length > 0) {
+            const hasUpcoming = ['birthday', 'deathday'].some(type => {
+                if (filters.anniversaries.includes(type) && node[type]) {
+                    const date = parseDate(node[type]);
+                    if (!date) return false;
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    let nextAnniversary = new Date(date);
+                    nextAnniversary.setFullYear(today.getFullYear());
+                    if (nextAnniversary < today) {
+                        nextAnniversary.setFullYear(today.getFullYear() + 1);
+                    }
+                    const diffDays = (nextAnniversary - today) / (1000 * 60 * 60 * 24);
+                    return diffDays >= 0 && diffDays <= 90;
+                }
+                return false;
+            });
+            if (!hasUpcoming) selfMatch = false;
+        }
+
+        if (selfMatch || childrenMatch.length > 0) {
+            const newNode = { ...node, children: childrenMatch };
+            if (childrenMatch.length > 0) {
+                newNode.collapsed = false;
+            }
+            return newNode;
+        }
+        
+        return null;
+    }
+    
+    function setupRichTextEditor(toolbar, contentArea) {
+        toolbar.addEventListener('click', (e) => {
+            const target = e.target.closest('button[data-command]');
+            if (target) {
+                e.preventDefault();
+                const command = target.dataset.command;
+                document.execCommand(command, false, null);
+                contentArea.focus();
+            }
+        });
+        toolbar.addEventListener('input', (e) => {
+            const target = e.target.closest('input[data-command]');
+            if(target) {
+                e.preventDefault();
+                const command = target.dataset.command;
+                const color = target.value;
+                document.execCommand(command, false, color);
+                contentArea.focus();
+            }
+        });
+    }
+    setupRichTextEditor(document.querySelector('#formModal .editor-toolbar'), document.getElementById('bio-editor'));
+    setupRichTextEditor(document.querySelector('#commentModal .editor-toolbar'), document.getElementById('comment-editor'));
+
+    const debugToggle = document.getElementById('debug-mode-toggle');
+    const debugStatus = document.getElementById('debug-status');
+    debugToggle.addEventListener('change', (e) => {
+        isDebugMode = e.target.checked;
+        if (isDebugMode) {
+            debugStatus.textContent = '開啟';
+            debugStatus.style.color = '#28a745';
+            console.log("--- 自檢模式已開啟 ---");
+        } else {
+            debugStatus.textContent = '關閉';
+            debugStatus.style.color = 'var(--danger-action-color)';
+            console.log("--- 自檢模式已關閉 ---");
+        }
+    });
+
+    // --- NEW & REVISED FEATURES ---
+    
+    const openAdvancedPanelBtn = document.getElementById('open-advanced-panel-btn');
+    const closeAdvancedPanelBtn = document.getElementById('close-advanced-panel-btn');
+    const advancedPanel = document.getElementById('advanced-panel');
+    openAdvancedPanelBtn.addEventListener('click', () => advancedPanel.classList.toggle('is-open'));
+    closeAdvancedPanelBtn.addEventListener('click', () => advancedPanel.classList.remove('is-open'));
+    
+    document.getElementById('toggle-filter-panel-btn').addEventListener('click', () => {
+        const filterPanel = document.getElementById('filter-panel');
+        filterPanel.style.display = filterPanel.style.display === 'block' ? 'none' : 'block';
+    });
+    
+    document.querySelector('.side-panel-content').addEventListener('click', (e) => {
+        const target = e.target.closest('a[data-modal]');
+        if (!target) return;
+        
+        e.preventDefault();
+        const modalId = target.dataset.modal;
+        const modalKey = modalId.replace('Modal', '');
+        const modal = modals[modalKey];
+        if (!modal) return;
+        
+        try {
+            if (modalId === 'dashboardModal') generateDashboardData();
+            if (modalId === 'relationshipModal') populateRelationshipSelects();
+            if (modalId === 'anniversaryModal') populateAnniversaries();
+            if (modalId === 'timelineModal') renderTimeline();
+            if (modalId === 'galleryModal') renderGallery();
+            if (modalId === 'mapModal') {
+                initMap();
+                setTimeout(() => map && map.invalidateSize(), 10);
+            }
+            
+            modal.style.display = 'block';
+            advancedPanel.classList.remove('is-open');
+        } catch (error) {
+            console.error(`開啟 Modal (${modalId}) 時發生錯誤:`, error);
+            alert(`開啟 ${target.textContent.trim()} 功能時發生錯誤，請檢查瀏覽器控制台訊息。`);
+        }
+    });
+
+    document.getElementById('export-json-btn-side').addEventListener('click', (e) => { e.preventDefault(); exportJsonData(); });
+    document.getElementById('print-btn-side').addEventListener('click', (e) => { e.preventDefault(); window.print(); });
+
+    function generateDashboardData() {
+        const stats = { total: 0, male: 0, female: 0, unknownGender: 0, alive: 0, deceased: 0, unknownStatus: 0, generations: 0, branches: {} };
+        const allPeople = getAllPeople();
+        stats.total = allPeople.length;
+        allPeople.forEach(p => {
+            if (p.gender === '男') stats.male++; else if (p.gender === '女') stats.female++; else stats.unknownGender++;
+            if (p.status === '存') stats.alive++; else if (p.status === '歿') stats.deceased++; else stats.unknownStatus++;
+            if (p.branchName) {
+                stats.branches[p.branchName] = (stats.branches[p.branchName] || 0) + 1;
+            }
+        });
+        document.getElementById('general-stats').innerHTML = `
+            <div class="stat-card"><h4>總人數</h4><div class="stat-number">${stats.total}</div></div>
+            <div class="stat-card"><h4>存 / 歿</h4><div class="stat-number">${stats.alive} / ${stats.deceased}</div></div>
+            <div class="stat-card"><h4>男 / 女</h4><div class="stat-number">${stats.male} / ${stats.female}</div></div>
+        `;
+        document.getElementById('charts').innerHTML = createBarChart('各房人數分佈', stats.branches);
+    }
+    function createBarChart(title, data) {
+        let itemsHtml = '';
+        const maxValue = Math.max(1, ...Object.values(data));
+        for (const [label, value] of Object.entries(data).sort((a,b) => b[1] - a[1])) {
+            itemsHtml += `<div class="bar-item"><div class="bar-label" title="${label}">${label}</div><div class="bar" style="width: ${ (value / maxValue) * 100}%; background-color: var(--male-border);"></div><span style="margin-left: 5px;">${value}</span></div>`;
+        }
+        return `<h4>${title}</h4><div class="bar-chart">${itemsHtml}</div>`;
+    }
+
+    function populateRelationshipSelects() {
+        const personASelect = document.getElementById('personA');
+        const personBSelect = document.getElementById('personB');
+        personASelect.innerHTML = personBSelect.innerHTML = '';
+        const allPeople = getAllPeople().sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+        allPeople.forEach(p => {
+            personASelect.add(new Option(p.name, p.id));
+            personBSelect.add(new Option(p.name, p.id));
+        });
+        document.getElementById('relationshipResult').textContent = '';
+    }
+    
+    document.getElementById('relationship-btn').addEventListener('click', () => {
+        const idA = document.getElementById('personA').value;
+        const idB = document.getElementById('personB').value;
+        document.getElementById('relationshipResult').textContent = calculateRelationship(idA, idB);
+    });
+
+// --- START: 全新輩分關係邏輯 ---
+
+    // 輔助函式：根據姓名在全域尋找成員節點
+    function findPersonByNameRecursive(node, name) {
+        if (!node || !name) return null;
+        if (node.name === name) return node;
+        
+        for (const spouse of (node.spouses || [])) {
+            if (spouse.name === name) return spouse;
+        }
+        for (const child of (node.children || [])) {
+            const found = findPersonByNameRecursive(child, name);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    // 輔助函式：取得一個人的母親節點物件
+    function getMother(person, tree) {
+        if (!person || !person.mother) return null;
+        return findPersonByNameRecursive(tree, person.mother);
+    }
+
+    // 輔助函式：取得一個人的父親節點物件
+    function getFather(person, tree) {
+        if (!person || !person.father) return null;
+        return findPersonByNameRecursive(tree, person.father);
+    }
+
+// 全新重寫的輩分計算主函式
+function calculateRelationship(idA, idB) {
+    if (idA === idB) return "同一個人";
+    const tree = historyStack[currentHistoryIndex].data.tree;
+    const personA = findPersonById(tree, idA);
+    const personB = findPersonById(tree, idB);
+
+    if (!personA || !personB) return "找不到成員";
+
+    const nameA = personA.name;
+    const nameB = personB.name;
+
+    // 1. 直接配偶
+    if ((personA.spouses || []).some(s => s.id === idB) || (personA.spousesText || "").includes(nameB)) {
+        return `${nameB} 是 ${nameA} 的配偶`;
+    }
+
+    // 2. 直系 - B 是 A 的長輩
+    const motherA = getMother(personA, tree);
+    const fatherA = getFather(personA, tree);
+
+    if (motherA && motherA.id === idB) return `${nameB} 是 ${nameA} 的母親`;
+    if (fatherA && fatherA.id === idB) return `${nameB} 是 ${nameA} 的父親`;
+
+    const paternalGrandmother = fatherA ? getMother(fatherA, tree) : null;
+    const paternalGrandfather = fatherA ? getFather(fatherA, tree) : null;
+    const maternalGrandmother = motherA ? getMother(motherA, tree) : null;
+    const maternalGrandfather = motherA ? getFather(motherA, tree) : null;
+    
+    if (paternalGrandmother && paternalGrandmother.id === idB) return `${nameB} 是 ${nameA} 的祖母(奶奶)`;
+    if (paternalGrandfather && paternalGrandfather.id === idB) return `${nameB} 是 ${nameA} 的祖父(爺爺)`;
+    if (maternalGrandmother && maternalGrandmother.id === idB) return `${nameB} 是 ${nameA} 的外祖母(外婆)`;
+    if (maternalGrandfather && maternalGrandfather.id === idB) return `${nameB} 是 ${nameA} 的外祖父(外公)`;
+
+    // 3. 直系 - A 是 B 的長輩 (反向檢查)
+    const motherB = getMother(personB, tree);
+    const fatherB = getFather(personB, tree);
+
+    if (motherB && motherB.id === idA) return `${nameB} 是 ${nameA} 的${personB.gender === '男' ? '兒子' : '女兒'}`;
+    if (fatherB && fatherB.id === idA) return `${nameB} 是 ${nameA} 的${personB.gender === '男' ? '兒子' : '女兒'}`;
+
+    // --- START: 修正後的姻親判斷邏輯 ---
+    // 4. 姻親 (公婆/岳父母) - 雙向檢查
+    const spouseNamesOfA = (personA.spousesText || "").split(',').map(s => s.trim()).filter(Boolean);
+    for (const spouseName of spouseNamesOfA) {
+        const spouseNode = findPersonByNameRecursive(tree, spouseName);
+        if (spouseNode) {
+            const motherOfSpouse = getMother(spouseNode, tree);
+            const fatherOfSpouse = getFather(spouseNode, tree);
+            if (motherOfSpouse && motherOfSpouse.id === idB) return `${nameB} 是 ${nameA} 的${personA.gender === '男' ? '岳母' : '婆婆'}`;
+            if (fatherOfSpouse && fatherOfSpouse.id === idB) return `${nameB} 是 ${nameA} 的${personA.gender === '男' ? '岳父' : '公公'}`;
+        }
+    }
+    // --- END: 修正後的姻親判斷邏輯 ---
+
+    // 5. 兄弟姊妹 (擁有相同的父母)
+    if (fatherA && fatherA.id === fatherB?.id && motherA && motherA.id === motherB?.id) {
+        if(fatherA.id !== null || motherA.id !== null) // 確保不是父母不詳
+             return "兄弟姊妹關係";
+    }
+
+    // 6. 叔伯姑舅姨
+    if (paternalGrandfather || paternalGrandmother) { // 只要有祖父母
+        const parentOfB = findPersonAndParentById(tree,idB)?.parent;
+        if(parentOfB && (parentOfB.id === paternalGrandfather?.id || parentOfB.id === paternalGrandmother?.id)){
+             return `${nameB} 是 ${nameA} 的 (父系)叔伯/姑姑輩`;
+        }
+    }
+     if (maternalGrandfather || maternalGrandmother) { // 只要有外祖父母
+        const parentOfB = findPersonAndParentById(tree,idB)?.parent;
+        if(parentOfB && (parentOfB.id === maternalGrandfather?.id || parentOfB.id === maternalGrandmother?.id)){
+             return `${nameB} 是 ${nameA} 的 (母系)舅舅/阿姨輩`;
+        }
+    }
+    
+    return "旁系或姻親關係"; // 如果都找不到，給一個通用的答案
+}
+
+    // 我們仍然需要舊的 findPersonById 和 findPersonAndParentById 來讓其他功能正常運作
+    function findPersonAndParentById(node, id, parent = null) {
+        if (!node) return null;
+        if (node.id === id) return { person: node, parent, isSpouse: false };
+        if (node.spouses) {
+            for (const spouse of node.spouses) {
+                if (spouse.id === id) return { person: spouse, parent: node, isSpouse: true, spouseOf: node };
+            }
+        }
+        if (node.children) {
+            for (const child of node.children) {
+                const found = findPersonAndParentById(child, id, node);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+    const findPersonById = (node, id) => findPersonAndParentById(node, id)?.person;
+
+    // --- END: 全新輩分關係邏輯 ---
+    
+    function populateAnniversaries() {
+        const upcomingBirthdays = [];
+        const upcomingDeathdays = [];
+        const allPeople = getAllPeople();
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        allPeople.forEach(p => {
+            ['birthday', 'deathday'].forEach(type => {
+                if (p[type]) {
+                    const date = parseDate(p[type]);
+                    if (!date) return;
+                    
+                    let nextAnniversary = new Date(date);
+                    nextAnniversary.setFullYear(today.getFullYear());
+                    if (nextAnniversary < today) {
+                        nextAnniversary.setFullYear(today.getFullYear() + 1);
+                    }
+
+                    const diffDays = Math.ceil((nextAnniversary - today) / (1000 * 60 * 60 * 24));
+
+                    if (diffDays >= 0 && diffDays <= 90) {
+                        const data = { name: p.name, date: `${nextAnniversary.getMonth()+1}/${nextAnniversary.getDate()}`, daysLeft: diffDays, sortDate: nextAnniversary };
+                        if (type === 'birthday') upcomingBirthdays.push(data);
+                        else upcomingDeathdays.push(data);
+                    }
+                }
+            });
+        });
+
+        const sortFn = (a, b) => a.sortDate - b.sortDate;
+        upcomingBirthdays.sort(sortFn);
+        upcomingDeathdays.sort(sortFn);
+
+        const renderList = (data) => data.length ? data.map(item => `<li><span>${item.name} (${item.date})</span><span class="days-left">${item.daysLeft} 天後</span></li>`).join('') : '<li>無</li>';
+
+        document.getElementById('upcomingBirthdays').innerHTML = renderList(upcomingBirthdays);
+        document.getElementById('upcomingDeathdays').innerHTML = renderList(upcomingDeathdays);
+    }
+    document.querySelectorAll('#anniversaryModal input[name="anniversary_type"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            document.getElementById('birthdays-view').style.display = e.target.value === 'birthday' ? 'block' : 'none';
+            document.getElementById('deathdays-view').style.display = e.target.value === 'deathday' ? 'block' : 'none';
+        });
+    });
+    
+    function parseDate(dateStr) {
+        if (!dateStr) return null;
+        try {
+            const cleanedStr = dateStr.replace(/年|月/g, '-').replace(/日|約/g, '').trim();
+            const date = new Date(cleanedStr);
+            return isNaN(date.getTime()) ? null : date;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function renderTimeline() {
+        const timelineUl = document.getElementById('timeline');
+        timelineUl.innerHTML = '';
+        const events = (historyStack[currentHistoryIndex].data.timelineEvents || []).sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        if (events.length === 0) {
+            timelineUl.innerHTML = '<p style="text-align: center;">尚無任何事件，請新增第一筆家族回憶吧！</p>';
+            return;
+        }
+        
+        events.forEach(event => {
+            timelineUl.innerHTML += `
+                <li class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-controls editor-only">
+                            <button class="node-btn edit-btn" data-action="edit-timeline" data-id="${event.id}">✎</button>
+                            <button class="node-btn delete-btn" data-action="delete-timeline" data-id="${event.id}">🗑️</button>
+                        </div>
+                        <div class="timeline-date">${event.date}</div>
+                        <h4>${event.title}</h4>
+                        <p>${event.description || ''}</p>
+                    </div>
+                </li>
+            `;
+        });
+    }
+    document.getElementById('add-timeline-event-btn').addEventListener('click', () => {
+        document.getElementById('timeline-form').reset();
+        document.getElementById('timelineEventId').value = '';
+        document.getElementById('timeline-form-title').textContent = '新增事件';
+        modals.timelineForm.style.display = 'block';
+    });
+    document.getElementById('timeline').addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        const action = target.dataset.action;
+        const id = target.dataset.id;
+        const events = historyStack[currentHistoryIndex].data.timelineEvents;
+
+        if (action === 'edit-timeline') {
+            const event = events.find(ev => ev.id == id);
+            if(event) {
+                document.getElementById('timelineEventId').value = event.id;
+                document.getElementById('timeline-date').value = event.date;
+                document.getElementById('timeline-title').value = event.title;
+                document.getElementById('timeline-description').value = event.description;
+                document.getElementById('timeline-form-title').textContent = '編輯事件';
+                modals.timelineForm.style.display = 'block';
+            }
+        } else if (action === 'delete-timeline') {
+            const index = events.findIndex(ev => ev.id == id);
+            if (index > -1) {
+                const eventTitle = events[index].title;
+                events.splice(index, 1);
+                recordHistory(`刪除時間軸事件: ${eventTitle}`, { incrementVersion: true });
+                renderTimeline();
+            }
+        }
+    });
+    document.getElementById('timeline-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('timelineEventId').value;
+        const events = historyStack[currentHistoryIndex].data.timelineEvents;
+        const eventData = {
+            date: document.getElementById('timeline-date').value,
+            title: document.getElementById('timeline-title').value,
+            description: document.getElementById('timeline-description').value,
+        };
+
+        if(id) { // Edit
+            const index = events.findIndex(ev => ev.id == id);
+            if (index > -1) {
+                events[index] = { ...events[index], ...eventData };
+                recordHistory(`修改時間軸事件: ${eventData.title}`, { incrementVersion: true });
+            }
+        } else { // Add
+            eventData.id = Date.now();
+            events.push(eventData);
+            recordHistory(`新增時間軸事件: ${eventData.title}`, { incrementVersion: true });
+        }
+        modals.timelineForm.style.display = 'none';
+        renderTimeline();
+    });
+
+    function renderGallery() {
+        const galleryGrid = document.getElementById('gallery-grid');
+        galleryGrid.innerHTML = '';
+        const photos = historyStack[currentHistoryIndex].data.photoGallery || [];
+
+        if (photos.length === 0) {
+            galleryGrid.innerHTML = '<p style="text-align: center;">藝廊是空的，快來上傳第一張珍貴的照片吧！</p>';
+            return;
+        }
+
+        photos.forEach(photo => {
+            const container = document.createElement('div');
+            container.className = 'gallery-thumbnail-container';
+            container.innerHTML = `
+                <img src="${photo.imageData}" class="gallery-thumbnail" data-id="${photo.id}" alt="${photo.description || '家族照片'}">
+                <button class="node-btn delete-btn gallery-delete-btn editor-only" data-action="delete-photo" data-id="${photo.id}">🗑️</button>
+            `;
+            galleryGrid.appendChild(container);
+        });
+    }
+    document.getElementById('upload-photo-btn').addEventListener('click', () => {
+        document.getElementById('photo-form').reset();
+        document.getElementById('photoId').value = '';
+        document.getElementById('photo-preview').style.display = 'none';
+        document.getElementById('photo-form-title').textContent = '上傳新照片';
+        
+        const tagsSelect = document.getElementById('photo-tags');
+        tagsSelect.innerHTML = '';
+        getAllPeople().forEach(p => {
+            tagsSelect.add(new Option(p.name, p.id));
+        });
+
+        modals.photoForm.style.display = 'block';
+    });
+    document.getElementById('photo-upload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('photo-preview').src = event.target.result;
+                document.getElementById('photo-preview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    document.getElementById('photo-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const photoData = {
+            id: Date.now(),
+            imageData: document.getElementById('photo-preview').src,
+            description: document.getElementById('photo-description').value,
+            taggedPersonIds: Array.from(document.getElementById('photo-tags').selectedOptions).map(opt => opt.value)
+        };
+        if (!photoData.imageData) {
+            alert('請先選擇一張照片！');
+            return;
+        }
+
+        historyStack[currentHistoryIndex].data.photoGallery.push(photoData);
+        recordHistory('上傳了一張新照片', { incrementVersion: true });
+        modals.photoForm.style.display = 'none';
+        renderGallery();
+    });
+    document.getElementById('gallery-grid').addEventListener('click', (e) => {
+        if (e.target.matches('.gallery-thumbnail')) {
+            const photoId = e.target.dataset.id;
+            const photo = historyStack[currentHistoryIndex].data.photoGallery.find(p => p.id == photoId);
+            if (photo) {
+                document.getElementById('lightbox-image').src = photo.imageData;
+                const taggedNames = photo.taggedPersonIds.map(id => findPersonById(historyStack[currentHistoryIndex].data.tree, id)?.name).filter(Boolean).join(', ');
+                let caption = photo.description || '';
+                if(taggedNames) caption += `<br><small>標記: ${taggedNames}</small>`;
+                document.getElementById('lightbox-caption').innerHTML = caption;
+                modals.lightbox.style.display = 'flex';
+            }
+        } else if (e.target.matches('[data-action="delete-photo"]')) {
+            const photoId = e.target.dataset.id;
+            const photos = historyStack[currentHistoryIndex].data.photoGallery;
+            const index = photos.findIndex(p => p.id == photoId);
+            if(index > -1) {
+                photos.splice(index, 1);
+                recordHistory('刪除了一張照片', { incrementVersion: true });
+                renderGallery();
+            }
+        }
+    });
+
+
+    function exportJsonData() {
+        const dataToExport = {
+            history: historyStack,
+            currentIndex: currentHistoryIndex
+        };
+        const jsonString = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `李氏家譜_備份_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+    
+    function initMap() {
+        if (!map) {
+            map = L.map('map').setView([23.4795, 120.4449], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            markersLayer = L.layerGroup().addTo(map);
+        }
+    }
+    document.getElementById('geocode-btn').addEventListener('click', () => geocodeAndDisplayMarkers(true));
+    document.getElementById('map-search-btn').addEventListener('click', () => {
+        const name = document.getElementById('map-search-name').value.trim();
+        geocodeAndDisplayMarkers(false, name);
+    });
+
+    async function geocodeAndDisplayMarkers(forceGeocode = false, filterName = '') {
+        markersLayer.clearLayers();
+        const allPeople = getAllPeople();
+        let foundPerson = null;
+
+        for (const person of allPeople) {
+            if (person.location && (!person.coords || forceGeocode)) {
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(person.location)}`);
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        person.coords = { lat: data[0].lat, lng: data[0].lon };
+                    }
+                } catch (e) { console.error("Geocoding failed:", e); }
+            }
+            if (person.coords) {
+                if (!filterName || person.name.includes(filterName)) {
+                    const marker = L.marker([person.coords.lat, person.coords.lng]).bindPopup(person.name);
+                    markersLayer.addLayer(marker);
+                    if (person.name.includes(filterName) && !foundPerson) {
+                        foundPerson = person;
+                    }
+                }
+            }
+        }
+        if (foundPerson && foundPerson.coords) {
+            map.setView(foundPerson.coords, 15);
+        } else if (filterName) {
+            alert(`找不到名為 "${filterName}" 的成員地圖位置。`);
+        }
+        if(forceGeocode) {
+            alert('地址定位完成！');
+            recordHistory('更新所有地址座標', { incrementVersion: true });
+        }
+    }
+    
+    function populateNameSelect() {
+        const select = document.getElementById('name-select');
+        select.innerHTML = '<option value="">從下拉選擇姓名...</option>';
+        const allPeople = getAllPeople();
+        const uniqueNames = [...new Set(allPeople.map(p => p.name.trim()))].sort((a,b) => a.localeCompare(b, 'zh-Hant'));
+        uniqueNames.forEach(name => {
+            select.add(new Option(name, name));
+        });
+    }
+
+    function initializeDynamicContent() {
+        updateVersionDisplay();
+        renderAnnouncements();
+        renderComments();
+        renderChangelog();
+    }
+    
+    function updateVersionDisplay() {
+        const data = historyStack[currentHistoryIndex].data;
+        const versionEl = document.getElementById('version-info');
+        if (versionEl) {
+             const date = historyStack[currentHistoryIndex].timestamp;
+             versionEl.textContent = `版本: v${data.version} (${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')})`;
+        }
+    }
+    
+    function renderAnnouncements() {
+        const list = document.getElementById('notification-list');
+        list.innerHTML = '';
+        historyStack[currentHistoryIndex].data.announcements.forEach(item => {
+            list.innerHTML += `<li>${item.content}<span class="noti-time">${item.date}</span></li>`;
+        });
+    }
+
+    function renderComments() {
+        const list = document.getElementById('comment-list');
+        list.innerHTML = '';
+        historyStack[currentHistoryIndex].data.comments.forEach(item => {
+            list.innerHTML += `<li><p>${item.content}</p><strong>- ${item.author}</strong> <span class="noti-time">${new Date(item.timestamp).toLocaleString('zh-TW')}</span></li>`;
+        });
+    }
+    
+    function renderChangelog() {
+        const list = document.getElementById('changelog-list');
+        list.innerHTML = '';
+        const changelog = (historyStack[currentHistoryIndex].data.changelog || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+        changelog.forEach(item => {
+            const changesHtml = item.changes.map(c => `<li>${c}</li>`).join('');
+            list.innerHTML += `
+                <li class="changelog-item">
+                    <div class="changelog-dot"></div>
+                    <div class="changelog-content">
+                        <div class="changelog-controls editor-only">
+                           <button class="node-btn edit-btn" data-action="edit-changelog" data-id="${item.id}">✎</button>
+                           <button class="node-btn delete-btn" data-action="delete-changelog" data-id="${item.id}">🗑️</button>
+                        </div>
+                        <div class="changelog-date">v${item.version} (${item.date})</div>
+                        <ul>${changesHtml}</ul>
+                    </div>
+                </li>
+            `;
+        });
+    }
+    
+    function getAllPeople() {
+        const people = [];
+        function traverse(node) {
+            if (!node) return;
+            people.push(node);
+            (node.spouses || []).forEach(s => people.push(s));
+            (node.children || []).forEach(c => traverse(c));
+        }
+        traverse(historyStack[currentHistoryIndex].data.tree);
+        return people;
+    }
+    
+    document.getElementById('open-comment-modal-btn').addEventListener('click', () => {
+        renderComments();
+        modals.comment.style.display = 'block';
+    });
+    
+    document.getElementById('notification-bell-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const panel = document.getElementById('notification-panel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    });
+    
+    document.getElementById('show-changelog-btn').addEventListener('click', () => {
+        renderChangelog();
+        modals.changelog.style.display = 'block';
+    });
+
+    document.getElementById('add-changelog-btn').addEventListener('click', () => {
+        document.getElementById('changelog-form').reset();
+        document.getElementById('changelogId').value = '';
+        document.getElementById('changelog-form-title').textContent = '新增版本紀錄';
+        modals.changelogForm.style.display = 'block';
+    });
+    document.getElementById('changelog-list').addEventListener('click', e => {
+        const target = e.target.closest('button[data-action]');
+        if (!target) return;
+        const action = target.dataset.action;
+        const id = target.dataset.id;
+        const changelog = historyStack[currentHistoryIndex].data.changelog;
+
+        if (action === 'edit-changelog') {
+            const entry = changelog.find(c => c.id == id);
+            if (entry) {
+                document.getElementById('changelogId').value = entry.id;
+                document.getElementById('changelog-version').value = entry.version;
+                document.getElementById('changelog-date').value = entry.date;
+                document.getElementById('changelog-changes').value = entry.changes.join('\n');
+                document.getElementById('changelog-form-title').textContent = '編輯版本紀錄';
+                modals.changelogForm.style.display = 'block';
+            }
+        } else if (action === 'delete-changelog') {
+            const index = changelog.findIndex(c => c.id == id);
+            if (index > -1) {
+                const version = changelog[index].version;
+                changelog.splice(index, 1);
+                recordHistory(`刪除版本紀錄: v${version}`, { incrementVersion: true });
+                renderChangelog();
+            }
+        }
+    });
+    document.getElementById('changelog-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const id = document.getElementById('changelogId').value;
+        const changelog = historyStack[currentHistoryIndex].data.changelog;
+        const entryData = {
+            version: document.getElementById('changelog-version').value,
+            date: document.getElementById('changelog-date').value,
+            changes: document.getElementById('changelog-changes').value.split('\n').filter(line => line.trim() !== '')
+        };
+
+        if (id) { // Edit
+            const index = changelog.findIndex(c => c.id == id);
+            if (index > -1) {
+                changelog[index] = { ...changelog[index], ...entryData };
+                recordHistory(`修改版本紀錄: v${entryData.version}`, { incrementVersion: true });
+            }
+        } else { // Add
+            entryData.id = Date.now();
+            changelog.push(entryData);
+            recordHistory(`新增版本紀錄: v${entryData.version}`, { incrementVersion: true });
+        }
+        modals.changelogForm.style.display = 'none';
+        renderChangelog();
+    });
+
+    document.getElementById('submit-comment-btn').addEventListener('click', () => {
+        const content = document.getElementById('comment-editor').innerHTML;
+        if (!content.trim()) return;
+        
+        const authStatus = JSON.parse(localStorage.getItem('authStatus'));
+        const currentUser = authStatus ? authStatus.displayName : '訪客';
+
+        historyStack[currentHistoryIndex].data.comments.push({
+            id: Date.now(),
+            author: currentUser,
+            timestamp: new Date().toISOString(),
+            content: content
+        });
+        
+        recordHistory(`由 ${currentUser} 新增留言`, { incrementVersion: true });
+        document.getElementById('comment-editor').innerHTML = '';
+        renderComments();
+    });
+    
+    // --- Datepicker Logic (Requirement #3) ---
+    function createDatepicker(targetInput) {
+        if(activeDatepicker) activeDatepicker.remove();
+        
+        const container = document.getElementById('datepicker-container');
+        const datepicker = document.createElement('div');
+        datepicker.className = 'datepicker';
+        container.appendChild(datepicker);
+        activeDatepicker = datepicker;
+
+        const inputRect = targetInput.getBoundingClientRect();
+        container.style.left = `${inputRect.left + window.scrollX}px`;
+        container.style.top = `${inputRect.bottom + window.scrollY + 5}px`;
+
+        let currentDate = new Date();
+        const inputValue = targetInput.value;
+        const parsedDate = parseDate(inputValue);
+        if (parsedDate) {
+            currentDate = parsedDate;
+        }
+
+        function renderCalendar(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const today = new Date();
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            
+            let daysHtml = '';
+            // Weekday headers
+            ['日', '一', '二', '三', '四', '五', '六'].forEach(day => {
+                daysHtml += `<span class="day-name">${day}</span>`;
+            });
+
+            // Blank days for the first week
+            for (let i = 0; i < firstDay.getDay(); i++) {
+                daysHtml += '<span></span>';
+            }
+
+            for (let i = 1; i <= lastDay.getDate(); i++) {
+                const d = new Date(year, month, i);
+                let classes = 'day';
+                if (d.toDateString() === today.toDateString()) classes += ' today';
+                if (parsedDate && d.toDateString() === parsedDate.toDateString()) classes += ' selected';
+                daysHtml += `<span class="${classes}" data-date="${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}">${i}</span>`;
+            }
+
+            datepicker.innerHTML = `
+                <div class="datepicker-header">
+                    <button id="prev-month">‹</button>
+                    <span>${year}年 ${month + 1}月</span>
+                    <button id="next-month">›</button>
+                </div>
+                <div class="datepicker-days">${daysHtml}</div>
+            `;
+            datepicker.style.display = 'block';
+
+            document.getElementById('prev-month').onclick = () => renderCalendar(new Date(year, month - 1, 1));
+            document.getElementById('next-month').onclick = () => renderCalendar(new Date(year, month + 1, 1));
+        }
+
+        datepicker.onclick = (e) => {
+            if (e.target.classList.contains('day')) {
+                targetInput.value = e.target.dataset.date;
+                datepicker.remove();
+                activeDatepicker = null;
+            }
+        };
+
+        renderCalendar(currentDate);
+    }
+    
+    document.getElementById('formModal').addEventListener('click', (e) => {
+        if (e.target.classList.contains('calendar-toggle-btn')) {
+            const targetInput = document.getElementById(e.target.dataset.target);
+            if (activeDatepicker) {
+                activeDatepicker.remove();
+                activeDatepicker = null;
+            } else {
+                 createDatepicker(targetInput);
+            }
+        }
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (activeDatepicker && !e.target.closest('.datepicker-container') && !e.target.classList.contains('calendar-toggle-btn')) {
+             activeDatepicker.remove();
+             activeDatepicker = null;
+        }
+    }, true);
+
+
+    // --- Initial Load ---
+    function initialize() {
+        loadData();
+        const authStatus = JSON.parse(localStorage.getItem('authStatus'));
+        setAuthMode(authStatus);
+        renderTree();
+        populateNameSelect();
+        initializeDynamicContent();
+    }
+
+    // 【新增】綁定 Undo/Redo 按鈕事件
+    document.getElementById('undo-btn').addEventListener('click', undo);
+    document.getElementById('redo-btn').addEventListener('click', redo);
+
+    function updateUndoRedoButtons() {
+        document.getElementById('undo-btn').disabled = (currentHistoryIndex <= 0);
+        document.getElementById('redo-btn').disabled = (currentHistoryIndex >= historyStack.length - 1);
+    }
+
+    // --- Initial Load ---
+
+    initialize();
+});
+</script>
+</body>
+</html>

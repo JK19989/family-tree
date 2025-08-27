@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家族成員登入</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="login-container">
+        <h1>李氏家族 全功能家譜</h1>
+        <p>請登入以存取完整功能</p>
+        <form id="login-form">
+            <div class="input-group">
+                <label for="username">帳號</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="input-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn-login">登入</button>
+        </form>
+        <div id="login-error" class="error-message"></div>
+        <div class="guest-login">
+            <a href="index.html" id="guest-continue">或以訪客身分繼續 &rarr;</a>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>

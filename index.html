@@ -152,9 +152,51 @@
     .deceased-list li:hover { background-color: rgba(0,0,0,0.1); }
     .animation-area { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
     #worship-details { display: none; align-items: center; justify-content: center; text-align: left; max-width: 70%; background: rgba(255,255,255,0.5); padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    #worship-image { width: 150px; height: 150px; border-radius: 5px; margin-right: 20px; object-fit: cover; }
-    #worship-bio { font-size: 1.1em; color: #333; max-height: 200px; overflow-y: auto; }
-    .worship-controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: flex; gap: 10px;}
+    #worship-image {
+            width: 150px; height: 150px;
+            border-radius: 5px; margin-right: 20px;
+            object-fit: cover;
+            /* 以下為新增樣式 */
+            background-color: #e0e0e0; /* 預設背景色 */
+            border: 2px dashed #bdbdbd; /* 虛線邊框，營造相框感 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #757575;
+        }
+        /* 當沒有照片時，顯示"暫無照片" */
+        #worship-image:not([src]) {
+            content: "暫無照片";
+        }
+        /* 當有照片時，隱藏文字並還原樣式 */
+        #worship-image[src] {
+            content: "";
+            border: 2px solid #ccc;
+        }
+        
+        #worship-bio {
+            font-size: 1.1em; color: #333;
+            /* 以下為修改/新增樣式 */
+            width: 400px; /* 固定寬度 */
+            height: 150px; /* 固定高度，與照片同高 */
+            overflow-y: auto;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+    .worship-controls {
+        position: absolute; bottom: 20px;
+        left: 50%; transform: translateX(-50%);
+        text-align: center; display: flex;
+        gap: 10px;
+        /* 以下為新增樣式 */
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 95%; /* 讓容器寬一點 */
+    }
+    
     .offering { position: absolute; opacity: 0; font-size: 5rem; user-select: none; }
     @keyframes offer-fruit { 0% { opacity: 0; transform: translateY(50px) scale(0.5); } 50% { opacity: 1; transform: translateY(-20px) scale(1.1); } 100% { opacity: 0; transform: translateY(-100px) scale(0.5); } }
     @keyframes burn-paper-new { 0% { opacity: 1; transform: translateY(60px) scale(1.2); filter: brightness(1.2) saturate(1); } 50% { opacity: 0.8; transform: translateY(-50px) scale(1.5); filter: brightness(2) saturate(5) hue-rotate(-20deg); } 90% { opacity: 0.5; filter: brightness(1) saturate(1); } 100% { opacity: 0; transform: translateY(-180px) scale(0.2) rotate(720deg); filter: brightness(0.5); } }
@@ -248,6 +290,93 @@
         .tree li::before, .tree li::after, .tree ul ul::before, .family-group::before { border-color: #000; }
         .tree { transform: scale(1) !important; }
     }
+    /* --- v3.8 祭拜畫面美化 --- */
+
+    /* 祭拜主畫面背景，使用柔和的漸層色 */
+    #worship-view {
+        background: linear-gradient(to top, #fdfbfb, #ebedee);
+    }
+
+    /* 中間的牌位樣式 */
+    .worship-tablet {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 0 0 1px #eee;
+        border: 1px solid #ddd;
+        min-height: 250px;
+    }
+
+    /* 牌位左側內容區 (照片+生平) */
+    #worship-details {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border-right: 1px solid #e0e0e0; /* 分隔線 */
+        padding-right: 30px;
+    }
+
+    /* 姓名改為垂直顯示，更有傳統韻味 */
+    #worship-target-name {
+        writing-mode: vertical-rl; /* 關鍵：讓文字垂直由右至左排列 */
+        text-orientation: mixed;
+        font-family: 'KaiTi', 'STKaiti', '標楷體', serif; /* 使用楷體，更顯莊重 */
+        font-size: 28px;
+        padding-left: 20px;
+        color: #333;
+        letter-spacing: 8px; /* 增加字距 */
+    }
+
+    /* 照片外框 */
+    #worship-image-container {
+        width: 150px;
+        height: 180px;
+        border: 8px solid #d1c4e9; /* 淡紫色外框 */
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.1); /* 內陰影增加立體感 */
+        padding: 4px;
+        background-color: #f5f5f5;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 照片本人 */
+    #worship-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none; /* 預設隱藏，有照片再顯示 */
+    }
+
+    /* 沒有照片時的預留位置 */
+    #worship-image-container:has(img:not([src*="data"]))::after {
+        content: "暫無遺像";
+        color: #888;
+        font-size: 16px;
+    }
+
+    /* 有照片時的樣式 */
+    #worship-image[src*="data"] {
+        display: block;
+    }
+
+    /* 生平簡介欄位 */
+    #worship-bio {
+        width: 300px;
+        height: auto; /* 高度自動 */
+        min-height: 50px; /* 最小高度 */
+        font-size: 16px;
+        line-height: 1.8;
+        color: #555;
+        text-align: justify;
+        padding: 0;
+        border: none;
+        background: none;
+    }
 </style>
 </head>
 <body>
@@ -340,7 +469,35 @@
 
 <div class="tree-container"><div id="family-tree-root" class="tree"></div></div>
 
-<div id="worship-view" class="modal"><div class="worship-container"><div class="animation-area"><div id="worship-details" style="display: none;"><img id="worship-image" src=""><div id="worship-bio"></div></div><h2 id="worship-target-name">請選擇祭拜對象</h2><div id="offering-animation-container"></div></div><div class="deceased-list"><h3>歷代祖先</h3><ul id="deceased-list-ul"></ul></div></div><div class="worship-controls"><button class="header-btn" data-worship="fruit">🍎 獻果</button><button class="header-btn" data-worship="paper">💰 燒紙</button><button class="header-btn" data-worship="incense">♨️ 上香</button><button class="header-btn" data-worship="flower">💐 獻花</button><button class="header-btn" data-worship="hands">🙏 拜拜</button><button id="end-worship-btn" class="header-btn small-red">結束</button></div></div>
+<div id="worship-view" class="modal">
+    <div class="worship-container">
+        <div class="animation-area">
+            
+            <div class="worship-tablet">
+                <div id="worship-details">
+                    <div id="worship-image-container">
+                        <img id="worship-image" src="" alt="成員照片">
+                    </div>
+                    <div id="worship-bio"></div>
+                </div>
+                <h2 id="worship-target-name"></h2>
+            </div>
+            <div id="offering-animation-container"></div>
+        </div>
+        <div class="deceased-list">
+            <h3>歷代祖先</h3>
+            <ul id="deceased-list-ul"></ul>
+        </div>
+    </div>
+    <div class="worship-controls">
+        <button class="header-btn" data-worship="fruit">🍎 獻果</button>
+        <button class="header-btn" data-worship="paper">💰 燒紙</button>
+        <button class="header-btn" data-worship="incense">♨️ 上香</button>
+        <button class="header-btn" data-worship="flower">💐 獻花</button>
+        <button class="header-btn" data-worship="hands">🙏 拜拜</button>
+        <button id="end-worship-btn" class="header-btn small-red">結束</button>
+    </div>
+</div>
 <div id="formModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="form-title"></h2><form id="person-form"><input type="hidden" id="personId"><input type="hidden" id="parentId"><div class="form-grid"><div><label for="name">姓名:</label><input type="text" id="name" required></div><div><label for="branchName">房別/分支:</label><input type="text" id="branchName" placeholder="長房, 次男, 1..."></div><div><label for="gender">性別:</label><select id="gender"><option value="不詳">不詳</option><option value="男">男</option><option value="女">女</option></select></div><div><label for="status">存歿:</label><select id="status"><option value="不詳">不詳</option><option value="存">存</option><option value="歿">歿</option></select></div>
 <div class="full-width date-input-container">
     <label for="birth">生日:</label>
@@ -750,7 +907,36 @@ document.addEventListener('DOMContentLoaded', () => {
         root = JSON.parse(jsonString);
         
         updateStatusByGeneration(root);
-        return root;
+
+       // --- START: v3.8 批次資料更新 ---
+        const toDeceased = ['李懷玉', '李王寶治', '李陳雪霞', '李懷德', '張秀嬌', '張隨', '李勇陞', '李顯彰', '柯春子', '李政宗', '李懷榮', '李秋雄'];
+        const toLiving = ['蔡銘芳', '盧水雪'];
+        
+        function traverseAndUpdate(node, generation = 1) {
+            if (!node) return;
+
+            // 更新指定名單
+            if (toDeceased.includes(node.name)) node.status = '歿';
+            if (toLiving.includes(node.name)) node.status = '存';
+
+            // 更新配偶狀態
+            (node.spouses || []).forEach(spouse => {
+                if (toDeceased.includes(spouse.name)) spouse.status = '歿';
+                if (toLiving.includes(spouse.name)) spouse.status = '存';
+                // 第四代及之前的配偶設為 "歿"
+                if (generation <= 4) {
+                    spouse.status = '歿';
+                }
+            });
+            
+            // 遞迴更新子女
+            (node.children || []).forEach(child => traverseAndUpdate(child, generation + 1));
+        }
+        
+        traverseAndUpdate(root);
+        // --- END: v3.8 批次資料更新 ---
+
+        return root;
     }
 
     const defaultData = { 
@@ -1347,35 +1533,60 @@ document.addEventListener('DOMContentLoaded', () => {
         applyZoom();
     });
 
-    document.getElementById('worship-btn-fixed').addEventListener('click', () => {
-        const worshipView = document.getElementById('worship-view');
-        const deceasedListUl = document.getElementById('deceased-list-ul');
-        deceasedListUl.innerHTML = '';
-        
-        const deceasedList = [];
-        function findDeceased(node) {
-            if (!node) return;
-            if (node.status === '歿') { deceasedList.push({id: node.id, name: node.name}); }
-            (node.spouses || []).forEach(spouse => {
-                if (spouse.status === '歿') { deceasedList.push({id: spouse.id, name: spouse.name}); }
-            });
-            (node.children || []).forEach(child => findDeceased(child));
-        }
-        
-        findDeceased(historyStack[currentHistoryIndex].data.tree);
+document.getElementById('worship-btn-fixed').addEventListener('click', () => {
+        const worshipView = document.getElementById('worship-view');
+        const deceasedListUl = document.getElementById('deceased-list-ul');
+        deceasedListUl.innerHTML = '';
+        
+        // 新的、更強大的列表生成與排序函式
+        function getSortedFamilyList() {
+            const flatList = [];
+            function traverse(node, generation) {
+                if (!node) return;
+                flatList.push({ ...node, generation });
+                // 將配偶也加入列表，並賦予和伴侶相同的代數與房別
+                (node.spouses || []).forEach(spouse => {
+                    flatList.push({ ...spouse, generation, branchName: node.branchName, isSpouse: true });
+                });
+                (node.children || []).forEach(child => traverse(child, generation + 1));
+            }
+            
+            traverse(historyStack[currentHistoryIndex].data.tree, 1);
+            
+            return flatList.sort((a, b) => {
+                // 第一排序：代數
+                if (a.generation !== b.generation) return a.generation - b.generation;
+                // 第二排序：房別
+                const rankA = getBranchRank(a.branchName);
+                const rankB = getBranchRank(b.branchName);
+                if (rankA !== rankB) return rankA - rankB;
+                // 第三排序：配偶排在主要成員後面
+                if (a.isSpouse && !b.isSpouse) return 1;
+                if (!a.isSpouse && b.isSpouse) return -1;
+                return 0;
+            });
+        }
 
-        deceasedList.forEach(person => {
-            const li = document.createElement('li');
-            li.textContent = person.name;
-            li.dataset.id = person.id;
-            deceasedListUl.appendChild(li);
-        });
-        
-        document.getElementById('worship-target-name').textContent = '請選擇祭拜對象';
-        document.getElementById('worship-target-name').style.display = 'block';
-        document.getElementById('worship-details').style.display = 'none';
-        worshipView.style.display = 'block';
-    });
+        const sortedList = getSortedFamilyList();
+
+        sortedList.forEach(person => {
+            if (person.status === '歿') { // 只顯示已歿成員
+                const li = document.createElement('li');
+                li.textContent = person.name;
+                li.dataset.id = person.id;
+                if (person.isSpouse) {
+                    li.style.marginLeft = "20px"; // 將配偶稍微縮排，視覺上更清楚
+                    li.textContent = `(配偶) ${person.name}`;
+                }
+                deceasedListUl.appendChild(li);
+            }
+        });
+        
+        document.getElementById('worship-target-name').textContent = '請選擇祭拜對象';
+        document.getElementById('worship-target-name').style.display = 'block';
+        document.getElementById('worship-details').style.display = 'none';
+        worshipView.style.display = 'block';
+    });
     document.getElementById('end-worship-btn').addEventListener('click', () => {
         document.getElementById('worship-view').style.display = 'none';
     });

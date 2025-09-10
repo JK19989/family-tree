@@ -130,3 +130,7 @@ body {
     cursor: not-allowed;
     background-color: #f9f9f9;
 }
+
+#mute-btn {
+    width: 48px; /* 稍微加寬以容納 emoji */
+}

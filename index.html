@@ -495,6 +495,7 @@
         <button class="header-btn" data-worship="incense">♨️ 上香</button>
         <button class="header-btn" data-worship="flower">💐 獻花</button>
         <button class="header-btn" data-worship="hands">🙏 拜拜</button>
+        <button id="mute-btn" class="header-btn" title="靜音">🔊</button>
         <button id="end-worship-btn" class="header-btn small-red">結束</button>
     </div>
 </div>
@@ -626,6 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let markersLayer = null; // Leaflet markers layer
     let cropper; // Cropper.js instance
     let activeDatepicker = null;
+    let isMuted = false; // 【新增這一行】
+
 
     // --- Debug Logging Function ---
     function logDebug(...args) {
@@ -634,6 +637,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // 【新增以下三個函式】
+    function playSound(soundId) {
+        if (isMuted) return;
+        const sound = document.getElementById(soundId);
+        if (sound) {
+            sound.currentTime = 0; // 讓音效可以連續觸發
+            sound.play();
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('mute-btn').textContent = isMuted ? '🔇' : '🔊';
+        document.getElementById('mute-btn').title = isMuted ? '取消靜音' : '靜音';
+        // 將靜音設定儲存到瀏覽器
+        localStorage.setItem('familyTreeMuted', isMuted);
+    }
+
+    function loadMutePreference() {
+        const savedMuteState = localStorage.getItem('familyTreeMuted');
+        if (savedMuteState === 'true') {
+            isMuted = true;
+            document.getElementById('mute-btn').textContent = '🔇';
+            document.getElementById('mute-btn').title = '取消靜音';
+        }
+    }
+
     // --- Data Management ---
     function updateStatusByGeneration(node, generation = 1) {
         if (!node) return;
@@ -968,11 +998,115 @@ document.addEventListener('DOMContentLoaded', () => {
                 announcements: [
                     { id: 1, date: '2025-08-27', content: '家譜系統 v3.7 已上線，新增獨立登入頁面並修正多項功能，詳情請見版本更新資訊。'},
                 ],
-                changelog: [
-                    { id: 1, version: '3.7', date: '2025-08-27', changes: ['新增獨立登入頁面與對應邏輯', '修正多項輩分關係計算錯誤', '實作可互動的日曆選擇器', '調整主要按鈕外觀並縮小尺寸', '還原 +/- 收合按鈕為舊版樣式', '新增多組預設使用者帳號', '全局更正「峯」字', '更新成員墓地資訊'] },
-                    { id: 2, version: '3.6', date: '2025-08-21', changes: ['實作「家族時間軸」與「照片藝廊」功能', '實作「重要紀念日」功能', '美化多組功能按鈕樣式'] }
+
+                //以下 版本資訊
+    changelog: [
+                    { 
+                        id: Date.now(), version: '3.8', date: '2025-09-11', 
+                        changes: [
+                            '【重要】重寫輩分計算底層邏輯，大幅提升準確性',
+                            '為「祭拜」功能加入背景音效與靜音按鈕',
+                            '美化「祭拜」介面，參考傳統樣式重新排版',
+                            '優化「祭拜」介面於手機上的按鈕排版',
+                            '批次更新多位成員的存歿狀態',
+                            '修正「祭拜」右側列表的排序邏輯'
+                        ] 
+                    },
+                    { 
+                        id: 1, version: '3.7', date: '2025-08-27', 
+                        changes: ['新增獨立登入頁面與對應邏輯', '修正多項輩分關係計算錯誤', '實作可互動的日曆選擇器', '調整主要按鈕外觀並縮小尺寸', '還原 +/- 收合按鈕為舊版樣式', '新增多組預設使用者帳號', '全局更正「峯」字', '更新成員墓地資訊'] 
+                    },
+                    { 
+                        id: 2, version: '3.6', date: '2025-08-21', 
+                        changes: ['實作「家族時間軸」與「照片藝廊」功能', '實作「重要紀念日」功能', '美化多組功能按鈕樣式'] 
+                    },
+                    {
+                        id: 3, version: '3.5', date: '2025-08-21',
+                        changes: [
+                            '功能修復：解決了大部分按鈕點擊無反應的問題。',
+                            '功能修復：「輩分關係」計算機的人名下拉選單可以正常載入。',
+                            '功能修復：姓名篩選後，畫面會準確跳轉並高亮第一個符合條件的成員。',
+                            '功能改善：大幅改善圖片上傳功能，現在上傳後會彈出專業的裁切視窗。',
+                            '功能改善：再次提升「+/-」收合按鈕的點擊靈敏度。',
+                            '功能新增：「地圖模式」中新增了成員下拉選單，可快速搜尋定位。',
+                            '內容更新：「功能說明」中已補充所有新功能的詳細介紹。',
+                            '版本機制：新增前端版本號自動遞增功能。'
+                        ]
+                    },
+                    {
+                        id: 4, version: '3.4', date: '2025-08-18',
+                        changes: [
+                            'UI/UX：將「進階功能」改為更穩定的右側滑出面板。',
+                            'UI/UX：新增「篩選器」按鈕，可自由顯示或隱藏篩選條件。',
+                            'UI/UX：將「祭祖祭拜」按鈕固定至畫面右上角。',
+                            'UI/UX：美化了編輯者登入後的後台按鈕樣式。',
+                            '動畫效果：將「點香」與「燒金紙」動畫升級為更逼真的視覺呈現。',
+                            '資料欄位：新增「忌日」資料欄位。',
+                            '核心功能：「重要紀念日」功能擴充，支援篩選「生日」或「忌日」。'
+                        ]
+                    },
+                    {
+                        id: 5, version: '3.3', date: '2025-08-18',
+                        changes: [
+                            '核心功能：實作「輩分關係圖」、「家族數據儀表板」、「重要紀念日提醒」、「列印模式」。',
+                            '核心功能：實作「家族時間軸」、「照片藝廊」、「資料匯出/備份(JSON)」、「地圖模式」。',
+                            '功能新增：為「生平簡介」欄位加入富文本編輯器（粗體、斜體、顏色等）。',
+                            '內容更新：「功能說明」中已補充所有新功能的詳細介紹。'
+                        ]
+                    },
+                    {
+                        id: 6, version: '3.2', date: '2025-08-17',
+                        changes: [
+                            '核心功能：修正了「祭祖祭拜」中的「獻上水果」、「焚燒金紙」等按鈕點擊後沒有動畫的問題。',
+                            '資料更新：根據您提供的大量清單，批次更新了數十位家族成員資料與其親屬關係。'
+                        ]
+                    },
+                    {
+                        id: 7, version: '3.1 & earlier', date: '2025-08-16',
+                        changes: [
+                            '建立了基本的樹狀圖顯示結構。',
+                            '實現了成員資料的增、刪、改、查 (CRUD)。',
+                            '建立了包含訪客、編輯者、管理員的權限系統。',
+                            '引入了修改歷史紀錄與還原機制。',
+                            '實現了「另存新檔 (HTML)」將資料與程式碼一同打包的功能。',
+                            '內建了姓名、房別、性別、存歿的篩選器。',
+                            '支援透過滑鼠縮放與拖曳家譜圖。',
+                            '初始的「祭祖祭拜」互動介面。'
+                        ]
+                    },
+                    {
+                        id: 8, version: '3.0', date: '2025-08-15',
+                        changes: [
+                            '重要更新：推出「輩分關係」計算機，可查詢任意兩位成員的親屬稱謂。',
+                            '功能新增：新增「JSON 備份匯出/匯入」功能，保障資料安全。',
+                            '功能改善：搜尋功能升級，現在會高亮顯示符合的成員節點。',
+                            '介面更新：重新設計成員的詳細資訊彈出視窗，版面更清晰。',
+                            '核心功能：重構部分程式碼，提升家譜圖的渲染效能。'
+                        ]
+                    },
+                    {
+                        id: 9, version: '2.0', date: '2025-08-11',
+                        changes: [
+                            '重要更新：引入編輯者與訪客兩種權限模式。',
+                            '功能新增：編輯者登入後，可看見「新增成員」、「修改資料」、「刪除成員」按鈕。',
+                            '功能新增：實現了透過拖曳節點來改變其父節點的功能（實驗性）。',
+                            '介面更新：主介面新增「進階功能」下拉選單，整合次要功能。',
+                            '核心功能：資料儲存格式從 CSV 改為 JSON，以支援更複雜的結構。'
+                        ]
+                    },
+                    {
+                        id: 10, version: '1.0', date: '2025-08-10',
+                        changes: [
+                            '初始版本發布。',
+                            '核心功能：實現了基本的樹狀圖顯示家族成員及其連接線。',
+                            '核心功能：可透過點擊成員節點來查看其基本資料（姓名、生日）。',
+                            '核心功能：支援透過滑鼠滾輪縮放、拖曳平移家譜圖。',
+                            '核心功能：內建姓名篩選器，可快速尋找成員。'
+                        ]
+                    }
                 ],
-                version: '3.7.0.0'
+                version: '3.8.0.0'
+                //以上 當前 版本資訊
             }
         }], 
         currentIndex: 0 
@@ -1616,44 +1750,55 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         const container = document.getElementById('offering-animation-container');
         const el = document.createElement('div');
         el.className = 'offering';
-        
+
         switch (type) {
             case 'fruit':
                 el.textContent = '🍎';
                 el.style.animation = 'offer-fruit 2s ease-out forwards';
+                playSound('sfx-offer'); // 播放音效
                 break;
             case 'paper':
                 el.textContent = '💰';
                 el.style.animation = 'burn-paper-new 2.5s ease-in-out forwards';
+                playSound('sfx-burn'); // 播放音效
                 break;
             case 'incense':
-                const incenseContainer = document.createElement('div');
-                incenseContainer.className = 'incense-container';
-                for(let i=0; i<3; i++) {
-                    const stick = document.createElement('div');
-                    stick.className = 'incense-stick';
-                    stick.style.transform = `rotate(${(i-1)*10}deg)`;
-                    const smoke = document.createElement('div');
-                    smoke.className = 'incense-smoke';
-                    smoke.style.animationDelay = `${i * 0.5}s`;
-                    stick.appendChild(smoke);
-                    incenseContainer.appendChild(stick);
-                }
-                container.appendChild(incenseContainer);
-                setTimeout(() => container.removeChild(incenseContainer), 5000);
-                return;
+                // ... (上香的動畫比較特別，我們在下面處理)
+                playSound('sfx-incense'); // 播放音效
+                break;
             case 'flower':
-                 el.textContent = '💐';
-                 el.style.animation = 'offer-flower 2s ease-out forwards';
-                 break;
+                el.textContent = '💐';
+                el.style.animation = 'offer-flower 2s ease-out forwards';
+                playSound('sfx-offer'); // 播放音效
+                break;
             case 'hands':
                 el.textContent = '🙏';
                 el.style.animation = 'offer-hands 2s ease-out forwards';
+                playSound('sfx-incense'); // 播放音效
                 break;
             default:
                 return;
         }
-        
+
+        // 上香動畫的特殊處理
+        if (type === 'incense') {
+            const incenseContainer = document.createElement('div');
+            incenseContainer.className = 'incense-container';
+            for(let i=0; i<3; i++) {
+                const stick = document.createElement('div');
+                stick.className = 'incense-stick';
+                stick.style.transform = `rotate(${(i-1)*10}deg)`;
+                const smoke = document.createElement('div');
+                smoke.className = 'incense-smoke';
+                smoke.style.animationDelay = `${i * 0.5}s`;
+                stick.appendChild(smoke);
+                incenseContainer.appendChild(stick);
+            }
+            container.appendChild(incenseContainer);
+            setTimeout(() => container.removeChild(incenseContainer), 5000);
+            return;
+        }
+
         el.style.left = `${Math.random() * 60 + 20}%`;
         container.appendChild(el);
         setTimeout(() => { container.removeChild(el); }, 2500);
@@ -2847,27 +2992,36 @@ function calculateRelationship(idA, idB) {
 
     // --- Initial Load ---
     function initialize() {
-        loadData();
-        const authStatus = JSON.parse(localStorage.getItem('authStatus'));
-        setAuthMode(authStatus);
-        renderTree();
-        populateNameSelect();
-        initializeDynamicContent();
-    }
+        loadData();
+        loadMutePreference(); // <--- 新增於此：載入靜音設定
+        const authStatus = JSON.parse(localStorage.getItem('authStatus'));
+        setAuthMode(authStatus);
+        renderTree();
+        populateNameSelect();
+        initializeDynamicContent();
+    }
 
-    // 【新增】綁定 Undo/Redo 按鈕事件
-    document.getElementById('undo-btn').addEventListener('click', undo);
-    document.getElementById('redo-btn').addEventListener('click', redo);
+    // --- 事件綁定 ---
+    // 綁定 Undo/Redo 按鈕事件
+    document.getElementById('undo-btn').addEventListener('click', undo);
+    document.getElementById('redo-btn').addEventListener('click', redo);
+    
+    // 綁定靜音按鈕事件
+    document.getElementById('mute-btn').addEventListener('click', toggleMute); // <--- 新增於此
 
-    function updateUndoRedoButtons() {
-        document.getElementById('undo-btn').disabled = (currentHistoryIndex <= 0);
-        document.getElementById('redo-btn').disabled = (currentHistoryIndex >= historyStack.length - 1);
-    }
+    function updateUndoRedoButtons() {
+        document.getElementById('undo-btn').disabled = (currentHistoryIndex <= 0);
+        document.getElementById('redo-btn').disabled = (currentHistoryIndex >= historyStack.length - 1);
+    }
 
-    // --- Initial Load ---
-
-    initialize();
+    // 啟動程式
+    initialize();
 });
 </script>
+
+<audio id="sfx-offer" src="sounds/offer.mp3" preload="auto"></audio>
+<audio id="sfx-burn" src="sounds/burn.mp3" preload="auto"></audio>
+<audio id="sfx-incense" src="sounds/incense.mp3" preload="auto"></audio>
+
 </body>
 </html>

@@ -377,9 +377,57 @@
         border: none;
         background: none;
     }
+
+
+    /* v4.0 載入中畫面樣式 */
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .loading-spinner {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid var(--primary-action-color);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1.5s linear infinite;
+    }
+
+    #loading-overlay p {
+        margin-top: 20px;
+        font-size: 1.2em;
+        color: var(--text-color);
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* v4.0 暫時隱藏失效的 Undo/Redo 按鈕 */
+    .history-nav-buttons {
+        display: none;
+    }
+
 </style>
 </head>
 <body>
+
+<div id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p>家族資料載入中...</p>
+</div>
 
 <button id="worship-btn-fixed">
     <span>♨️ 祭拜</span>
@@ -463,7 +511,7 @@
         <span id="status-indicator"></span>
         <button id="show-history-btn" class="header-btn header-btn-editor" title="查看所有修改紀錄並還原">查看修改歷史</button>
         <button id="manage-accounts-btn" class="header-btn header-btn-editor admin-only" title="管理編輯者帳號">帳號管理</button>
-        <button id="save-html-btn" class="header-btn header-btn-editor" title="將目前所有變更儲存為一個新的HTML檔案">另存新檔 (HTML)</button>
+        <button id="save-html-btn" class="header-btn header-btn-editor" title="將目前所有變更儲存為一個新的HTML檔案">另存新檔 (HTML)下載離線備份 (HTML)</button>
     </div>
 </div>
 
@@ -613,8 +661,26 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // --- START: 請將這段程式碼貼在最頂部 ---
+    // Firebase 服務的實體，我們先宣告在這裡
+    let db; 
+
+    // 您的 Firebase 專案設定
+    const firebaseConfig = {
+        apiKey: "AIzaSyBC6OUlxdibSn2LwckWHNE2CRqyNCn2sAc",
+        authDomain: "family-tree-8bcb1.firebaseapp.com",
+        projectId: "family-tree-8bcb1",
+        storageBucket: "family-tree-8bcb1.appspot.com",
+        messagingSenderId: "1022926104375",
+        appId: "1:1022926104375:web:440e204c9a168bed74dcb2",
+        measurementId: "G-VDZ1F294LC"
+    };
+    // --- END: 請將這段程式碼貼在最頂部 ---
     // --- App State & Constants ---
     let historyStack = [];
     let currentHistoryIndex = -1;
@@ -628,7 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cropper; // Cropper.js instance
     let activeDatepicker = null;
     let isMuted = false; // 【新增這一行】
-
+    let worshipCooldown = false; // 【新增這一行】
 
     // --- Debug Logging Function ---
     function logDebug(...args) {
@@ -1000,166 +1066,235 @@ document.addEventListener('DOMContentLoaded', () => {
                 ],
 
                 //以下 版本資訊
-    changelog: [
-                    { 
-                        id: Date.now(), version: '3.8', date: '2025-09-11', 
-                        changes: [
-                            '【重要】重寫輩分計算底層邏輯，大幅提升準確性',
-                            '為「祭拜」功能加入背景音效與靜音按鈕',
-                            '美化「祭拜」介面，參考傳統樣式重新排版',
-                            '優化「祭拜」介面於手機上的按鈕排版',
-                            '批次更新多位成員的存歿狀態',
-                            '修正「祭拜」右側列表的排序邏輯'
-                        ] 
-                    },
-                    { 
-                        id: 1, version: '3.7', date: '2025-08-27', 
-                        changes: ['新增獨立登入頁面與對應邏輯', '修正多項輩分關係計算錯誤', '實作可互動的日曆選擇器', '調整主要按鈕外觀並縮小尺寸', '還原 +/- 收合按鈕為舊版樣式', '新增多組預設使用者帳號', '全局更正「峯」字', '更新成員墓地資訊'] 
-                    },
-                    { 
-                        id: 2, version: '3.6', date: '2025-08-21', 
-                        changes: ['實作「家族時間軸」與「照片藝廊」功能', '實作「重要紀念日」功能', '美化多組功能按鈕樣式'] 
-                    },
-                    {
-                        id: 3, version: '3.5', date: '2025-08-21',
-                        changes: [
-                            '功能修復：解決了大部分按鈕點擊無反應的問題。',
-                            '功能修復：「輩分關係」計算機的人名下拉選單可以正常載入。',
-                            '功能修復：姓名篩選後，畫面會準確跳轉並高亮第一個符合條件的成員。',
-                            '功能改善：大幅改善圖片上傳功能，現在上傳後會彈出專業的裁切視窗。',
-                            '功能改善：再次提升「+/-」收合按鈕的點擊靈敏度。',
-                            '功能新增：「地圖模式」中新增了成員下拉選單，可快速搜尋定位。',
-                            '內容更新：「功能說明」中已補充所有新功能的詳細介紹。',
-                            '版本機制：新增前端版本號自動遞增功能。'
-                        ]
-                    },
-                    {
-                        id: 4, version: '3.4', date: '2025-08-18',
-                        changes: [
-                            'UI/UX：將「進階功能」改為更穩定的右側滑出面板。',
-                            'UI/UX：新增「篩選器」按鈕，可自由顯示或隱藏篩選條件。',
-                            'UI/UX：將「祭祖祭拜」按鈕固定至畫面右上角。',
-                            'UI/UX：美化了編輯者登入後的後台按鈕樣式。',
-                            '動畫效果：將「點香」與「燒金紙」動畫升級為更逼真的視覺呈現。',
-                            '資料欄位：新增「忌日」資料欄位。',
-                            '核心功能：「重要紀念日」功能擴充，支援篩選「生日」或「忌日」。'
-                        ]
-                    },
-                    {
-                        id: 5, version: '3.3', date: '2025-08-18',
-                        changes: [
-                            '核心功能：實作「輩分關係圖」、「家族數據儀表板」、「重要紀念日提醒」、「列印模式」。',
-                            '核心功能：實作「家族時間軸」、「照片藝廊」、「資料匯出/備份(JSON)」、「地圖模式」。',
-                            '功能新增：為「生平簡介」欄位加入富文本編輯器（粗體、斜體、顏色等）。',
-                            '內容更新：「功能說明」中已補充所有新功能的詳細介紹。'
-                        ]
-                    },
-                    {
-                        id: 6, version: '3.2', date: '2025-08-17',
-                        changes: [
-                            '核心功能：修正了「祭祖祭拜」中的「獻上水果」、「焚燒金紙」等按鈕點擊後沒有動畫的問題。',
-                            '資料更新：根據您提供的大量清單，批次更新了數十位家族成員資料與其親屬關係。'
-                        ]
-                    },
-                    {
-                        id: 7, version: '3.1 & earlier', date: '2025-08-16',
-                        changes: [
-                            '建立了基本的樹狀圖顯示結構。',
-                            '實現了成員資料的增、刪、改、查 (CRUD)。',
-                            '建立了包含訪客、編輯者、管理員的權限系統。',
-                            '引入了修改歷史紀錄與還原機制。',
-                            '實現了「另存新檔 (HTML)」將資料與程式碼一同打包的功能。',
-                            '內建了姓名、房別、性別、存歿的篩選器。',
-                            '支援透過滑鼠縮放與拖曳家譜圖。',
-                            '初始的「祭祖祭拜」互動介面。'
-                        ]
-                    },
-                    {
-                        id: 8, version: '3.0', date: '2025-08-15',
-                        changes: [
-                            '重要更新：推出「輩分關係」計算機，可查詢任意兩位成員的親屬稱謂。',
-                            '功能新增：新增「JSON 備份匯出/匯入」功能，保障資料安全。',
-                            '功能改善：搜尋功能升級，現在會高亮顯示符合的成員節點。',
-                            '介面更新：重新設計成員的詳細資訊彈出視窗，版面更清晰。',
-                            '核心功能：重構部分程式碼，提升家譜圖的渲染效能。'
-                        ]
-                    },
-                    {
-                        id: 9, version: '2.0', date: '2025-08-11',
-                        changes: [
-                            '重要更新：引入編輯者與訪客兩種權限模式。',
-                            '功能新增：編輯者登入後，可看見「新增成員」、「修改資料」、「刪除成員」按鈕。',
-                            '功能新增：實現了透過拖曳節點來改變其父節點的功能（實驗性）。',
-                            '介面更新：主介面新增「進階功能」下拉選單，整合次要功能。',
-                            '核心功能：資料儲存格式從 CSV 改為 JSON，以支援更複雜的結構。'
-                        ]
-                    },
-                    {
-                        id: 10, version: '1.0', date: '2025-08-10',
-                        changes: [
-                            '初始版本發布。',
-                            '核心功能：實現了基本的樹狀圖顯示家族成員及其連接線。',
-                            '核心功能：可透過點擊成員節點來查看其基本資料（姓名、生日）。',
-                            '核心功能：支援透過滑鼠滾輪縮放、拖曳平移家譜圖。',
-                            '核心功能：內建姓名篩選器，可快速尋找成員。'
-                        ]
-                    }
-                ],
-                version: '3.8.0.0'
-                //以上 當前 版本資訊
+                changelog: [
+                                {
+                                    id: Date.now(), version: '3.9', date: '2025-09-11', 
+                                    changes: [
+                                        '【重大更新】引入 Google Firebase 後端服務，為即時同步做準備。',
+                                        '建立雲端資料庫：啟用 Firestore Database 作為新的中央資料庫。',
+                                        '資料遷移：將全部 149 筆家族成員資料從本地成功遷移至雲端資料庫。',
+                                        '啟用雲端驗證：設定 Firebase Authentication，為新版登入系統打下基礎。',
+                                        '規劃 v4.0 開發藍圖，確立即時同步、前後端分離的開發方向。'
+                                    ] 
+                                },
+                                {
+                                    id: 1, version: '3.8', date: '2025-09-11', 
+                                    changes: [
+                                        '【重要】重寫輩分計算底層邏輯，大幅提升準確性',
+                                        '為「祭拜」功能加入背景音效與靜音按鈕',
+                                        '美化「祭拜」介面，參考傳統樣式重新排版',
+                                        '優化「祭拜」介面於手機上的按鈕排版',
+                                        '批次更新多位成員的存歿狀態',
+                                        '修正「祭拜」右側列表的排序邏輯'
+                                    ] 
+                                },
+                                { 
+                                    id: 2, version: '3.7', date: '2025-08-27', 
+                                    changes: ['新增獨立登入頁面與對應邏輯', '修正多項輩分關係計算錯誤', '實作可互動的日曆選擇器', '調整主要按鈕外觀並縮小尺寸', '還原 +/- 收合按鈕為舊版樣式', '新增多組預設使用者帳號', '全局更正「峯」字', '更新成員墓地資訊'] 
+                                },
+                                { 
+                                    id: 3, version: '3.6', date: '2025-08-21', 
+                                    changes: ['實作「家族時間軸」與「照片藝廊」功能', '實作「重要紀念日」功能', '美化多組功能按鈕樣式'] 
+                                },
+                                {
+                                    id: 4, version: '3.5', date: '2025-08-21',
+                                    changes: [
+                                        '功能修復：解決了大部分按鈕點擊無反應的問題。',
+                                        '功能修復：「輩分關係」計算機的人名下拉選單可以正常載入。',
+                                        '功能修復：姓名篩選後，畫面會準確跳轉並高亮第一個符合條件的成員。',
+                                        '功能改善：大幅改善圖片上傳功能，現在上傳後會彈出專業的裁切視窗。',
+                                        '功能改善：再次提升「+/-」收合按鈕的點擊靈敏度。',
+                                        '功能新增：「地圖模式」中新增了成員下拉選單，可快速搜尋定位。',
+                                        '內容更新：「功能說明」中已補充所有新功能的詳細介紹。',
+                                        '版本機制：新增前端版本號自動遞增功能。'
+                                    ]
+                                },
+                                {
+                                    id: 5, version: '3.4', date: '2025-08-18',
+                                    changes: [
+                                        'UI/UX：將「進階功能」改為更穩定的右側滑出面板。',
+                                        'UI/UX：新增「篩選器」按鈕，可自由顯示或隱藏篩選條件。',
+                                        'UI/UX：將「祭祖祭拜」按鈕固定至畫面右上角。',
+                                        'UI/UX：美化了編輯者登入後的後台按鈕樣式。',
+                                        '動畫效果：將「點香」與「燒金紙」動畫升級為更逼真的視覺呈現。',
+                                        '資料欄位：新增「忌日」資料欄位。',
+                                        '核心功能：「重要紀念日」功能擴充，支援篩選「生日」或「忌日」。'
+                                    ]
+                                },
+                                {
+                                    id: 6, version: '3.3', date: '2025-08-18',
+                                    changes: [
+                                        '核心功能：實作「輩分關係圖」、「家族數據儀表板」、「重要紀念日提醒」、「列印模式」。',
+                                        '核心功能：實作「家族時間軸」、「照片藝廊」、「資料匯出/備份(JSON)」、「地圖模式」。',
+                                        '功能新增：為「生平簡介」欄位加入富文本編輯器（粗體、斜體、顏色等）。',
+                                        '內容更新：「功能說明」中已補充所有新功能的詳細介紹。'
+                                    ]
+                                },
+                                {
+                                    id: 7, version: '3.2', date: '2025-08-17',
+                                    changes: [
+                                        '核心功能：修正了「祭祖祭拜」中的「獻上水果」、「焚燒金紙」等按鈕點擊後沒有動畫的問題。',
+                                        '資料更新：根據您提供的大量清單，批次更新了數十位家族成員資料與其親屬關係。'
+                                    ]
+                                },
+                                {
+                                    id: 8, version: '3.1 & earlier', date: '2025-08-16',
+                                    changes: [
+                                        '建立了基本的樹狀圖顯示結構。',
+                                        '實現了成員資料的增、刪、改、查 (CRUD)。',
+                                        '建立了包含訪客、編輯者、管理員的權限系統。',
+                                        '引入了修改歷史紀錄與還原機制。',
+                                        '實現了「另存新檔 (HTML)」將資料與程式碼一同打包的功能。',
+                                        '內建了姓名、房別、性別、存歿的篩選器。',
+                                        '支援透過滑鼠縮放與拖曳家譜圖。',
+                                        '初始的「祭祖祭拜」互動介面。'
+                                    ]
+                                },
+                                {
+                                    id: 9, version: '3.0', date: '2025-08-15',
+                                    changes: [
+                                        '重要更新：推出「輩分關係」計算機，可查詢任意兩位成員的親屬稱謂。',
+                                        '功能新增：新增「JSON 備份匯出/匯入」功能，保障資料安全。',
+                                        '功能改善：搜尋功能升級，現在會高亮顯示符合的成員節點。',
+                                        '介面更新：重新設計成員的詳細資訊彈出視窗，版面更清晰。',
+                                        '核心功能：重構部分程式碼，提升家譜圖的渲染效能。'
+                                    ]
+                                },
+                                {
+                                    id: 10, version: '2.0', date: '2025-08-11',
+                                    changes: [
+                                        '重要更新：引入編輯者與訪客兩種權限模式。',
+                                        '功能新增：編輯者登入後，可看見「新增成員」、「修改資料」、「刪除成員」按鈕。',
+                                        '功能新增：實現了透過拖曳節點來改變其父節點的功能（實驗性）。',
+                                        '介面更新：主介面新增「進階功能」下拉選單，整合次要功能。',
+                                        '核心功能：資料儲存格式從 CSV 改為 JSON，以支援更複雜的結構。'
+                                    ]
+                                },
+                                {
+                                    id: 11, version: '1.0', date: '2025-08-10',
+                                    changes: [
+                                        '初始版本發布。',
+                                        '核心功能：實現了基本的樹狀圖顯示家族成員及其連接線。',
+                                        '核心功能：可透過點擊成員節點來查看其基本資料（姓名、生日）。',
+                                        '核心功能：支援透過滑鼠滾輪縮放、拖曳平移家譜圖。',
+                                        '核心功能：內建姓名篩選器，可快速尋找成員。'
+                                    ]
+                                }
+                            ],
+                            version: '4.0.0.0'
+                            //以上 當前 版本資訊
             }
         }], 
         currentIndex: 0 
     };
 
+
     function loadData() {
-        const dataElement = document.getElementById('family-data');
-        const embeddedData = dataElement.textContent.trim();
-        if (embeddedData) {
-            try {
-                const parsed = JSON.parse(embeddedData);
-                if (parsed.history && parsed.history.every(h => h.data.tree && h.data.users)) {
-                    parsed.history.forEach(h => {
-                        if (!h.data.timelineEvents) h.data.timelineEvents = [];
-                        if (!h.data.photoGallery) h.data.photoGallery = [];
-                        if (!h.data.comments) h.data.comments = [{ id: Date.now(), author: '系統', timestamp: new Date().toISOString(), content: '留言板功能已啟用。'}];
-                        if (!h.data.announcements) h.data.announcements = [{ id: 1, date: '2025-08-21', content: '公告功能已啟用。'}];
-                        if (!h.data.changelog) h.data.changelog = defaultData.history[0].data.changelog;
-                        if (h.data.changelog && !h.data.changelog.every(c => c.id)) {
-                             h.data.changelog.forEach((c, i) => c.id = c.id || Date.now() + i);
-                        }
-                        if (!h.data.version || !h.data.version.includes('.')) h.data.version = '3.4.0.0'; 
-                    });
-                    historyStack = parsed.history.map(item => ({...item, timestamp: new Date(item.timestamp)}));
-                    currentHistoryIndex = parsed.currentIndex;
-                    logDebug("成功從 HTML 嵌入的資料載入", historyStack.length, "筆歷史紀錄");
-                } else {
-                     throw new Error("Data structure mismatch");
-                }
-            } catch (e) {
-                console.error("無法解析嵌入的資料或結構不符，將使用預設資料。", e);
-                loadDefaultData();
-            }
-        } else {
-            logDebug("HTML 中無嵌入資料，將使用預設資料");
-            loadDefaultData();
-        }
-    }
-    
-    function loadDefaultData() {
-        const defaultState = JSON.parse(JSON.stringify(defaultData));
-        historyStack = defaultState.history.map(item => ({...item, timestamp: new Date(item.timestamp)}));
-        currentHistoryIndex = 0;
-        logDebug("已載入預設資料");
+        // 這個函式現在是空的，由 initialize 統一調度
     }
 
-// 【新增】完整 UI 刷新函式
+    function setupRealtimeListener() {
+        console.log("開始監聽雲端資料...");
+        const membersCollectionRef = db.collection("members");
+
+        membersCollectionRef.onSnapshot((querySnapshot) => {
+            console.log("偵測到雲端資料變動！正在更新畫面...");
+            const members = [];
+            querySnapshot.forEach(doc => {
+                members.push(doc.data());
+            });
+
+            const tree = buildTreeFromFlatData(members);
+            
+            const cloudData = JSON.parse(JSON.stringify(defaultData.history[0].data));
+            cloudData.tree = tree;
+            
+            historyStack = [{
+                timestamp: new Date(),
+                action: '從雲端同步',
+                data: cloudData
+            }];
+            currentHistoryIndex = 0;
+            
+            fullUIRefresh();
+            console.log("家譜樹已同步為最新狀態！");
+
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay.style.display !== 'none') {
+                const buttonsToToggle = ['open-advanced-panel-btn', 'open-comment-modal-btn', 'toggle-filter-panel-btn', 'worship-btn-fixed'];
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => { loadingOverlay.style.display = 'none'; }, 300);
+                buttonsToToggle.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.disabled = false;
+                });
+            }
+        }, (error) => {
+            console.error("監聽 Firestore 資料失敗:", error);
+            alert("無法與雲端資料庫建立即時連線，請查看 Console。");
+        });
+    }
+    
+
+    // 將 setupRealtimeListener 函式公開到全域，讓外面的 script 可以呼叫它
+    window.setupRealtimeListener = setupRealtimeListener;
+
+    // 新增：將扁平資料陣列重建成樹狀結構的輔助函式
+    function buildTreeFromFlatData(people) {
+        // 創建一個所有成員的 Map，方便快速查找，並預先初始化 children 和 spouses 陣列
+        const peopleMap = new Map(people.map(p => [p.id, { ...p, children: [], spouses: [] }]));
+        let root = null;
+
+        // 第一階段：建立父子之間的血緣連結
+        people.forEach(person => {
+            const personNode = peopleMap.get(person.id);
+            // 關鍵：我們參考最原始的、結構正確的 defaultData 來判斷父子關係
+            const parentInfo = findPersonAndParentById(defaultData.history[0].data.tree, person.id);
+            
+            if (parentInfo && parentInfo.parent) {
+                const parentNode = peopleMap.get(parentInfo.parent.id);
+                if (parentNode && !parentNode.children.some(c => c.id === personNode.id)) {
+                    parentNode.children.push(personNode);
+                }
+            } else if (person.id === 'root') {
+                root = personNode;
+            }
+        });
+
+        // 第二階段：只為血緣成員建立「單向」的配偶連結
+        people.forEach(person => {
+            const personInfo = findPersonAndParentById(defaultData.history[0].data.tree, person.id);
+            // 關鍵：只為那些在原始資料中「不是」配偶的人（也就是血緣成員）去添加配偶列表
+            if (personInfo && !personInfo.isSpouse) {
+                const personNode = peopleMap.get(person.id);
+                (personNode.spousesText || "").split(',').map(s => s.trim()).filter(Boolean).forEach(spouseName => {
+                    const spouse = people.find(p => p.name === spouseName);
+                    if (spouse) {
+                        const spouseNode = peopleMap.get(spouse.id);
+                        if (spouseNode && !personNode.spouses.some(s => s.id === spouseNode.id)) {
+                            personNode.spouses.push(spouseNode);
+                        }
+                    }
+                });
+            }
+        });
+        
+        return root;
+    }
+
+
+    // 【新增】完整 UI 刷新函式
     function fullUIRefresh() {
         logDebug(`UI 刷新，當前歷史索引: ${currentHistoryIndex}`);
+        // 新增安全檢查：如果歷史紀錄是空的，就先不執行任何操作
+        if (historyStack.length === 0 || !historyStack[currentHistoryIndex]) return; 
+        
         updateVersionDisplay();
         renderTree();
         populateNameSelect();
-        // 如果未來有更多需要刷新的部分，可以加在這裡
+        renderAnnouncements();
+        renderComments();
+        renderChangelog();
     }
     
     // 【新增】上一步 (Undo) 函式
@@ -1402,14 +1537,22 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'add-spouse': openFormModal({ spouseOfId: personId }); break;
             case 'edit': openFormModal({ personToEdit: person }); break;
             case 'delete':
-                document.getElementById('confirm-text').textContent = `確定要刪除「${person.name}」${person.children && person.children.length > 0 ? '及其所有後代' : ''}嗎？`;
-                modals.confirm.style.display = 'block';
-                document.getElementById('confirm-ok-btn').onclick = () => {
-                    deletePersonRecursive(currentTreeData, personId);
-                    recordHistory(`刪除了 ${person.name}`, { incrementVersion: true });
-                    modals.confirm.style.display = 'none';
-                };
-                break;
+                document.getElementById('confirm-text').textContent = `確定要從雲端永久刪除「${person.name}」嗎？此操作無法復原！`;
+                modals.confirm.style.display = 'block';
+                
+                document.getElementById('confirm-ok-btn').onclick = async () => {
+                    try {
+                        const { doc, deleteDoc } = window.firestoreTools;
+                        await deleteDoc(doc(window.db, "members", personId));
+                        console.log("成員已從雲端刪除:", personId);
+                        modals.confirm.style.display = 'none';
+                        // 同樣地，監聽器會自動更新畫面
+                    } catch (error) {
+                        console.error("從 Firestore 刪除失敗:", error);
+                        alert("刪除失敗，請查看 Console 錯誤訊息。");
+                    }
+                };
+                break;
             case 'view':
                 const detailList = document.getElementById('detail-list');
                 document.getElementById('detail-name').textContent = person.name;
@@ -1459,69 +1602,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const personId = document.getElementById('personId').value;
-        const parentId = document.getElementById('parentId').value;
-        const spouseOfId = document.getElementById('formModal').dataset.spouseOfId;
-        const currentTreeData = historyStack[currentHistoryIndex].data.tree;
-        
-        const formData = {
-            name: document.getElementById('name').value, 
-            branchName: document.getElementById('branchName').value,
-            gender: document.getElementById('gender').value, 
-            status: document.getElementById('status').value,
-            cemetery: document.getElementById('cemetery').value,
-            birth: document.getElementById('birth').value, 
-            deathday: document.getElementById('deathday').value,
-            image: document.getElementById('image-data').value,
-            bio: document.getElementById('bio-editor').innerHTML,
-            father: document.getElementById('father').value,
-            mother: document.getElementById('mother').value,
-            spousesText: document.getElementById('spousesText').value,
-            location: document.getElementById('location').value,
-        };
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const { doc, setDoc } = window.firestoreTools;
 
-        logDebug("表單提交，資料:", formData);
+        const personId = document.getElementById('personId').value;
+        const parentId = document.getElementById('parentId').value;
+        const spouseOfId = document.getElementById('formModal').dataset.spouseOfId;
+        
+        const formData = {
+            name: document.getElementById('name').value, 
+            branchName: document.getElementById('branchName').value,
+            gender: document.getElementById('gender').value, 
+            status: document.getElementById('status').value,
+            cemetery: document.getElementById('cemetery').value,
+            birth: document.getElementById('birth').value, 
+            deathday: document.getElementById('deathday').value,
+            image: document.getElementById('image-data').value,
+            bio: document.getElementById('bio-editor').innerHTML,
+            father: document.getElementById('father').value,
+            mother: document.getElementById('mother').value,
+            spousesText: document.getElementById('spousesText').value,
+            location: document.getElementById('location').value,
+        };
 
-        let actionText = '';
-        if (personId) {
-            const { person: personToEdit } = findPersonAndParentById(currentTreeData, personId);
-            const oldSpousesText = personToEdit.spousesText || '';
-            
-            Object.assign(personToEdit, formData);
-            
-            synchronizeSpouseObjects(personToEdit, currentTreeData);
-            synchronizeSpousesText(personToEdit, oldSpousesText, currentTreeData);
-            
-            actionText = `修改了 ${personToEdit.name} 的資料`;
-
-        } else if (parentId) {
-            const parent = findPersonById(currentTreeData, parentId);
-            const newPerson = { ...formData, id: Date.now().toString(), children: [], spouses: [] };
-            if (!parent.children) parent.children = [];
-            parent.children.push(newPerson);
-            parent.children.sort((a, b) => getBranchRank(a.branchName) - getBranchRank(b.branchName));
-            synchronizeSpouseObjects(newPerson, currentTreeData);
-            synchronizeSpousesText(newPerson, '', currentTreeData);
-            actionText = `為 ${parent.name} 新增了後代 ${newPerson.name}`;
-        } else if (spouseOfId) {
-            const mainPerson = findPersonById(currentTreeData, spouseOfId);
-            const newSpouse = { ...formData, id: Date.now().toString() };
-            if (!mainPerson.spouses) mainPerson.spouses = [];
-            mainPerson.spouses.push(newSpouse);
-            let mainSpouses = (mainPerson.spousesText || '').split(',').map(s => s.trim()).filter(Boolean);
-            if (!mainSpouses.includes(newSpouse.name)) {
-                mainSpouses.push(newSpouse.name);
-                mainPerson.spousesText = mainSpouses.join(',');
-            }
-            actionText = `為 ${mainPerson.name} 新增了配偶 ${newSpouse.name}`;
-        }
-        recordHistory(actionText, { incrementVersion: true });
-        renderTree(); // <<<<<<<<<<< 在這裡加上這一行
-        modals.form.style.display = 'none';
-        populateNameSelect();
-    });
+        try {
+            if (personId) { // --- 這是「修改」現有成員 ---
+                formData.id = personId;
+                const docRef = doc(window.db, "members", personId);
+                await setDoc(docRef, formData, { merge: true }); // merge: true 表示只更新有變動的欄位
+                console.log("成員資料已更新至雲端:", personId);
+            } else { // --- 這是「新增」成員 ---
+                const newId = Date.now().toString();
+                formData.id = newId;
+                const docRef = doc(window.db, "members", newId);
+                await setDoc(docRef, formData);
+                console.log("新成員已建立於雲端:", newId);
+            }
+            modals.form.style.display = 'none'; // 關閉表單
+            // 我們不再需要手動呼叫 renderTree()，監聽器會自動處理！
+        } catch (error) {
+            console.error("寫入 Firestore 失敗:", error);
+            alert("儲存失敗，請查看 Console 錯誤訊息。");
+        }
+    });
     
     document.getElementById('image-upload').addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -1805,9 +1929,20 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
     }
 
     document.querySelector('.worship-controls').addEventListener('click', (e) => {
+        // 如果在冷卻中，就直接忽略這次點擊，不執行任何動作
+        if (worshipCooldown) return; 
+
         const target = e.target.closest('[data-worship]');
         if (target) {
             triggerWorshipAnimation(target.dataset.worship);
+            
+            // 觸發動畫後，立刻設定為冷卻狀態
+            worshipCooldown = true;
+            
+            // 100毫秒 (0.1秒) 後，自動解除冷卻狀態
+            setTimeout(() => {
+                worshipCooldown = false;
+            }, 100);
         }
     });
 
@@ -1882,7 +2017,7 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
             statuses: Array.from(document.querySelectorAll('#status-filter-options input:checked')).map(el => el.value),
             anniversaries: Array.from(document.querySelectorAll('#anniversary-filter-options input:checked')).map(el => el.value),
         };
-        const fullTree = JSON.parse(JSON.stringify(historyStack[currentHistoryIndex].data.tree));
+        const fullTree = deepCopy(historyStack[currentHistoryIndex].data.tree);
         const filteredTree = filterTree(fullTree, filters);
         renderTree(filteredTree);
 
@@ -2124,11 +2259,42 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         return map[branchName] || 999;
     }
 
+
+    // 【v4.0 最終除錯】新增：能處理循環引用的深度複製函式
+    function deepCopy(obj, seen = new Map()) {
+        // 如果不是物件，或是 null，直接返回
+        if (obj === null || typeof obj !== 'object') {
+            return obj;
+        }
+        // 如果已經處理過這個物件，直接返回之前複製的結果，打破循環
+        if (seen.has(obj)) {
+            return seen.get(obj);
+        }
+
+        // 根據原始物件是陣列還是物件，建立新的容器
+        const newObj = Array.isArray(obj) ? [] : {};
+
+        // 將新建立的容器存入 map，這樣後續如果再遇到就能找到
+        seen.set(obj, newObj);
+
+        // 遍歷物件的所有屬性，遞迴地進行深度複製
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                newObj[key] = deepCopy(obj[key], seen);
+            }
+        }
+
+        return newObj;
+    }
+
+
+    // 您原有的 filterTree 函式會在這個位置
     function filterTree(node, filters) {
         if (!node) return null;
 
+        // 使用我們新的 deepCopy 函式來處理子節點，避免循環引用
         let childrenMatch = (node.children || [])
-            .map(child => filterTree(JSON.parse(JSON.stringify(child)), filters))
+            .map(child => filterTree(deepCopy(child), filters))
             .filter(child => child !== null);
         
         let selfMatch = true;
@@ -2334,83 +2500,83 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         return findPersonByNameRecursive(tree, person.father);
     }
 
-// 全新重寫的輩分計算主函式
-function calculateRelationship(idA, idB) {
-    if (idA === idB) return "同一個人";
-    const tree = historyStack[currentHistoryIndex].data.tree;
-    const personA = findPersonById(tree, idA);
-    const personB = findPersonById(tree, idB);
+    // 全新重寫的輩分計算主函式
+    function calculateRelationship(idA, idB) {
+        if (idA === idB) return "同一個人";
+        const tree = historyStack[currentHistoryIndex].data.tree;
+        const personA = findPersonById(tree, idA);
+        const personB = findPersonById(tree, idB);
 
-    if (!personA || !personB) return "找不到成員";
+        if (!personA || !personB) return "找不到成員";
 
-    const nameA = personA.name;
-    const nameB = personB.name;
+        const nameA = personA.name;
+        const nameB = personB.name;
 
-    // 1. 直接配偶
-    if ((personA.spouses || []).some(s => s.id === idB) || (personA.spousesText || "").includes(nameB)) {
-        return `${nameB} 是 ${nameA} 的配偶`;
-    }
-
-    // 2. 直系 - B 是 A 的長輩
-    const motherA = getMother(personA, tree);
-    const fatherA = getFather(personA, tree);
-
-    if (motherA && motherA.id === idB) return `${nameB} 是 ${nameA} 的母親`;
-    if (fatherA && fatherA.id === idB) return `${nameB} 是 ${nameA} 的父親`;
-
-    const paternalGrandmother = fatherA ? getMother(fatherA, tree) : null;
-    const paternalGrandfather = fatherA ? getFather(fatherA, tree) : null;
-    const maternalGrandmother = motherA ? getMother(motherA, tree) : null;
-    const maternalGrandfather = motherA ? getFather(motherA, tree) : null;
-    
-    if (paternalGrandmother && paternalGrandmother.id === idB) return `${nameB} 是 ${nameA} 的祖母(奶奶)`;
-    if (paternalGrandfather && paternalGrandfather.id === idB) return `${nameB} 是 ${nameA} 的祖父(爺爺)`;
-    if (maternalGrandmother && maternalGrandmother.id === idB) return `${nameB} 是 ${nameA} 的外祖母(外婆)`;
-    if (maternalGrandfather && maternalGrandfather.id === idB) return `${nameB} 是 ${nameA} 的外祖父(外公)`;
-
-    // 3. 直系 - A 是 B 的長輩 (反向檢查)
-    const motherB = getMother(personB, tree);
-    const fatherB = getFather(personB, tree);
-
-    if (motherB && motherB.id === idA) return `${nameB} 是 ${nameA} 的${personB.gender === '男' ? '兒子' : '女兒'}`;
-    if (fatherB && fatherB.id === idA) return `${nameB} 是 ${nameA} 的${personB.gender === '男' ? '兒子' : '女兒'}`;
-
-    // --- START: 修正後的姻親判斷邏輯 ---
-    // 4. 姻親 (公婆/岳父母) - 雙向檢查
-    const spouseNamesOfA = (personA.spousesText || "").split(',').map(s => s.trim()).filter(Boolean);
-    for (const spouseName of spouseNamesOfA) {
-        const spouseNode = findPersonByNameRecursive(tree, spouseName);
-        if (spouseNode) {
-            const motherOfSpouse = getMother(spouseNode, tree);
-            const fatherOfSpouse = getFather(spouseNode, tree);
-            if (motherOfSpouse && motherOfSpouse.id === idB) return `${nameB} 是 ${nameA} 的${personA.gender === '男' ? '岳母' : '婆婆'}`;
-            if (fatherOfSpouse && fatherOfSpouse.id === idB) return `${nameB} 是 ${nameA} 的${personA.gender === '男' ? '岳父' : '公公'}`;
+        // 1. 直接配偶
+        if ((personA.spouses || []).some(s => s.id === idB) || (personA.spousesText || "").includes(nameB)) {
+            return `${nameB} 是 ${nameA} 的配偶`;
         }
-    }
-    // --- END: 修正後的姻親判斷邏輯 ---
 
-    // 5. 兄弟姊妹 (擁有相同的父母)
-    if (fatherA && fatherA.id === fatherB?.id && motherA && motherA.id === motherB?.id) {
-        if(fatherA.id !== null || motherA.id !== null) // 確保不是父母不詳
-             return "兄弟姊妹關係";
-    }
+        // 2. 直系 - B 是 A 的長輩
+        const motherA = getMother(personA, tree);
+        const fatherA = getFather(personA, tree);
 
-    // 6. 叔伯姑舅姨
-    if (paternalGrandfather || paternalGrandmother) { // 只要有祖父母
-        const parentOfB = findPersonAndParentById(tree,idB)?.parent;
-        if(parentOfB && (parentOfB.id === paternalGrandfather?.id || parentOfB.id === paternalGrandmother?.id)){
-             return `${nameB} 是 ${nameA} 的 (父系)叔伯/姑姑輩`;
+        if (motherA && motherA.id === idB) return `${nameB} 是 ${nameA} 的母親`;
+        if (fatherA && fatherA.id === idB) return `${nameB} 是 ${nameA} 的父親`;
+
+        const paternalGrandmother = fatherA ? getMother(fatherA, tree) : null;
+        const paternalGrandfather = fatherA ? getFather(fatherA, tree) : null;
+        const maternalGrandmother = motherA ? getMother(motherA, tree) : null;
+        const maternalGrandfather = motherA ? getFather(motherA, tree) : null;
+        
+        if (paternalGrandmother && paternalGrandmother.id === idB) return `${nameB} 是 ${nameA} 的祖母(奶奶)`;
+        if (paternalGrandfather && paternalGrandfather.id === idB) return `${nameB} 是 ${nameA} 的祖父(爺爺)`;
+        if (maternalGrandmother && maternalGrandmother.id === idB) return `${nameB} 是 ${nameA} 的外祖母(外婆)`;
+        if (maternalGrandfather && maternalGrandfather.id === idB) return `${nameB} 是 ${nameA} 的外祖父(外公)`;
+
+        // 3. 直系 - A 是 B 的長輩 (反向檢查)
+        const motherB = getMother(personB, tree);
+        const fatherB = getFather(personB, tree);
+
+        if (motherB && motherB.id === idA) return `${nameB} 是 ${nameA} 的${personB.gender === '男' ? '兒子' : '女兒'}`;
+        if (fatherB && fatherB.id === idA) return `${nameB} 是 ${nameA} 的${personB.gender === '男' ? '兒子' : '女兒'}`;
+
+        // --- START: 修正後的姻親判斷邏輯 ---
+        // 4. 姻親 (公婆/岳父母) - 雙向檢查
+        const spouseNamesOfA = (personA.spousesText || "").split(',').map(s => s.trim()).filter(Boolean);
+        for (const spouseName of spouseNamesOfA) {
+            const spouseNode = findPersonByNameRecursive(tree, spouseName);
+            if (spouseNode) {
+                const motherOfSpouse = getMother(spouseNode, tree);
+                const fatherOfSpouse = getFather(spouseNode, tree);
+                if (motherOfSpouse && motherOfSpouse.id === idB) return `${nameB} 是 ${nameA} 的${personA.gender === '男' ? '岳母' : '婆婆'}`;
+                if (fatherOfSpouse && fatherOfSpouse.id === idB) return `${nameB} 是 ${nameA} 的${personA.gender === '男' ? '岳父' : '公公'}`;
+            }
         }
-    }
-     if (maternalGrandfather || maternalGrandmother) { // 只要有外祖父母
-        const parentOfB = findPersonAndParentById(tree,idB)?.parent;
-        if(parentOfB && (parentOfB.id === maternalGrandfather?.id || parentOfB.id === maternalGrandmother?.id)){
-             return `${nameB} 是 ${nameA} 的 (母系)舅舅/阿姨輩`;
+        // --- END: 修正後的姻親判斷邏輯 ---
+
+        // 5. 兄弟姊妹 (擁有相同的父母)
+        if (fatherA && fatherA.id === fatherB?.id && motherA && motherA.id === motherB?.id) {
+            if(fatherA.id !== null || motherA.id !== null) // 確保不是父母不詳
+                return "兄弟姊妹關係";
         }
+
+        // 6. 叔伯姑舅姨
+        if (paternalGrandfather || paternalGrandmother) { // 只要有祖父母
+            const parentOfB = findPersonAndParentById(tree,idB)?.parent;
+            if(parentOfB && (parentOfB.id === paternalGrandfather?.id || parentOfB.id === paternalGrandmother?.id)){
+                return `${nameB} 是 ${nameA} 的 (父系)叔伯/姑姑輩`;
+            }
+        }
+        if (maternalGrandfather || maternalGrandmother) { // 只要有外祖父母
+            const parentOfB = findPersonAndParentById(tree,idB)?.parent;
+            if(parentOfB && (parentOfB.id === maternalGrandfather?.id || parentOfB.id === maternalGrandmother?.id)){
+                return `${nameB} 是 ${nameA} 的 (母系)舅舅/阿姨輩`;
+            }
+        }
+        
+        return "旁系或姻親關係"; // 如果都找不到，給一個通用的答案
     }
-    
-    return "旁系或姻親關係"; // 如果都找不到，給一個通用的答案
-}
 
     // 我們仍然需要舊的 findPersonById 和 findPersonAndParentById 來讓其他功能正常運作
     function findPersonAndParentById(node, id, parent = null) {
@@ -2738,12 +2904,7 @@ function calculateRelationship(idA, idB) {
         });
     }
 
-    function initializeDynamicContent() {
-        updateVersionDisplay();
-        renderAnnouncements();
-        renderComments();
-        renderChangelog();
-    }
+
     
     function updateVersionDisplay() {
         const data = historyStack[currentHistoryIndex].data;
@@ -2991,15 +3152,27 @@ function calculateRelationship(idA, idB) {
 
 
     // --- Initial Load ---
+    // --- 最終的啟動程序 ---
     function initialize() {
-        loadData();
-        loadMutePreference(); // <--- 新增於此：載入靜音設定
-        const authStatus = JSON.parse(localStorage.getItem('authStatus'));
-        setAuthMode(authStatus);
-        renderTree();
-        populateNameSelect();
-        initializeDynamicContent();
-    }
+        // 1. 顯示載入畫面
+        document.getElementById('loading-overlay').style.display = 'flex';
+        ['open-advanced-panel-btn', 'open-comment-modal-btn', 'toggle-filter-panel-btn', 'worship-btn-fixed'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = true;
+        });
+
+        // 2. 初始化 Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore(app);
+        
+        // 3. 執行不需要雲端資料的初始設定
+        loadMutePreference();
+        const authStatus = JSON.parse(localStorage.getItem('authStatus'));
+        setAuthMode(authStatus);
+
+        // 4. 啟動雲端資料監聽（這會觸發第一次資料載入和畫面渲染）
+        setupRealtimeListener();
+    }
 
     // --- 事件綁定 ---
     // 綁定 Undo/Redo 按鈕事件
@@ -3022,6 +3195,12 @@ function calculateRelationship(idA, idB) {
 <audio id="sfx-offer" src="sounds/offer.mp3" preload="auto"></audio>
 <audio id="sfx-burn" src="sounds/burn.mp3" preload="auto"></audio>
 <audio id="sfx-incense" src="sounds/incense.mp3" preload="auto"></audio>
+
+
+
+
+
+
 
 </body>
 </html>

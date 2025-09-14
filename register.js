@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 uid: user.uid,
                 email: email,
                 displayName: displayName,
-                createdAt: new Date() // 記錄建立時間
+                createdAt: new Date(), // 記錄建立時間
+                role: 'editor', // 【新增這一行】新註冊的使用者預設為 'editor'
             });
             console.log("Firestore user 文件已建立:", user.uid);
             // --- 新增步驟結束 ---

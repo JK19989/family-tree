@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 根據登入的 email 來判斷是否為管理員
             // 記得要去 Firebase 後台建立對應的帳號
             //以下isAdminUser 是管理員，isAdminUser 是工程管理員
-            const isAdminUser = ['admin@family.com', 'root@family.com', 'test@family.com'].includes(email);
+            const isAdminUser = ['admin@family.com', 'root@family.com', 'test@family.com', 'cool5122001222@yahoo.com.tw'].includes(email);
             const isSysAdminUser = email === 'root@family.com';
 
             const authData = {
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     // --- v4.2 忘記密碼功能 ---
     const forgotPasswordLink = document.getElementById('forgot-password');
     forgotPasswordLink.addEventListener('click', async (e) => {

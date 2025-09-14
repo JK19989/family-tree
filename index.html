@@ -587,6 +587,23 @@
 <div id="changelogModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>版本更新歷史</h2><button id="add-changelog-btn" class="header-btn small-blue editor-only">新增條目</button><ul id="changelog-list"></ul></div></div>
 <div id="changelogFormModal" class="modal"><div class="modal-content" style="max-width: 500px;"><span class="close-btn">&times;</span><h2 id="changelog-form-title"></h2><form id="changelog-form"><input type="hidden" id="changelogId"><div class="form-grid"><div class="full-width"><label for="changelog-version">版本號:</label><input type="text" id="changelog-version" placeholder="例如: 3.7.1" required></div><div class="full-width"><label for="changelog-date">日期:</label><input type="date" id="changelog-date" required></div><div class="full-width"><label for="changelog-changes">更新內容 (每行一項):</label><textarea id="changelog-changes" rows="5" required></textarea></div></div><button type="submit" class="account-form-btn">儲存</button></form></div></div>
 <div id="cropModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>裁切照片</h2><div><img id="crop-image-preview" src=""></div><div style="text-align: center; margin-top: 15px;"><button id="crop-confirm-btn" class="header-btn small-blue">確定裁切</button></div></div></div>
+<div id="announcementModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>公告管理</h2>
+        <h4>現有公告</h4>
+        <ul id="announcement-list-admin" style="border: 1px solid #eee; padding: 10px; min-height: 100px; max-height: 200px; overflow-y: auto;">
+            </ul>
+        <h4 style="margin-top: 20px;">新增公告</h4>
+        <form id="add-announcement-form" class="form-grid">
+            <div class="full-width">
+                <label for="announcement-content">公告內容:</label>
+                <textarea id="announcement-content" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="header-btn small-blue">發佈新公告</button>
+        </form>
+    </div>
+</div>
 <div id="donateModal" class="modal">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
         <span class="close-btn">&times;</span>
@@ -643,6 +660,7 @@
         <li><a href="#" data-modal="mapModal">🗺️ 地圖模式</a></li>
         <li><a href="#" id="export-json-btn-side" class="editor-only">💾 匯出JSON備份</a></li>
         <li><a href="#" id="print-btn-side">🖨️ 列印預覽</a></li>
+        <li><a href="#" id="manage-announcements-btn" class="admin-only">📢 公告管理</a></li>
     </ul>
 </div>
 
@@ -1060,8 +1078,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 //以下 版本資訊
                 changelog: [
-                                 {
-                                    id: Date.now(), version: '4.1', date: '2025-09-14',
+                                {
+                                    id: Date.now(), version: '4.2', date: '2025-09-15',
+                                    changes: [
+                                        '【使用者系統升級】新增使用者「註冊」功能。',
+                                        '【使用者系統升級】新增「忘記密碼」功能，可透過 Email 重設密碼。',
+                                        '【使用者系統升級】新增「我的資料」功能，使用者可自行修改顯示名稱。',
+                                        '【後台功能】新增「線上公告管理」，管理員可直接在網頁上發布與刪除最新公告。',
+                                        '【安全性強化】為 Firestore 資料庫新增安全性規則，保護使用者個人資料，僅限本人修改。',
+                                        '【架構優化】新增「載入中」畫面，解決非同步資料載入時的操作衝突問題。',
+                                        '【UI/UX 優化】註冊頁面新增常用 Email 網域快捷按鈕。'
+                                    ]
+                                },
+                                {
+                                    id: 1, version: '4.1', date: '2025-09-14',
                                     changes: [
                                         '功能新增：加入「榮譽制」贊助系統。',
                                         '功能新增：點擊贊助按鈕可記錄贊助者資訊至雲端資料庫。',
@@ -1071,7 +1101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 { 
-                                    id: 1, version: '4.0', date: '2025-09-13', 
+                                    id: 2, version: '4.0', date: '2025-09-13', 
                                     changes: [
                                         '【重大更新】登入系統完全重構，改為使用 Google Firebase Authentication 進行雲端驗證。',
                                         '安全性提升：使用者帳號密碼不再儲存於前端檔案中，改由 Firebase 加密儲存與管理。',
@@ -1079,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ] 
                                 },
                                 {
-                                    id: 2, version: '3.9', date: '2025-09-11', 
+                                    id: 3, version: '3.9', date: '2025-09-11', 
                                     changes: [
                                         '【重大更新】引入 Google Firebase 後端服務，為即時同步做準備。',
                                         '建立雲端資料庫：啟用 Firestore Database 作為新的中央資料庫。',
@@ -1089,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ] 
                                 },
                                 {
-                                    id: 3, version: '3.8', date: '2025-09-11', 
+                                    id: 4, version: '3.8', date: '2025-09-11', 
                                     changes: [
                                         '【重要】重寫輩分計算底層邏輯，大幅提升準確性',
                                         '為「祭拜」功能加入背景音效與靜音按鈕',
@@ -1100,15 +1130,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ] 
                                 },
                                 { 
-                                    id: 4, version: '3.7', date: '2025-08-27', 
+                                    id: 5, version: '3.7', date: '2025-08-27', 
                                     changes: ['新增獨立登入頁面與對應邏輯', '修正多項輩分關係計算錯誤', '實作可互動的日曆選擇器', '調整主要按鈕外觀並縮小尺寸', '還原 +/- 收合按鈕為舊版樣式', '新增多組預設使用者帳號', '全局更正「峯」字', '更新成員墓地資訊'] 
                                 },
                                 { 
-                                    id: 5, version: '3.6', date: '2025-08-21', 
+                                    id: 6, version: '3.6', date: '2025-08-21', 
                                     changes: ['實作「家族時間軸」與「照片藝廊」功能', '實作「重要紀念日」功能', '美化多組功能按鈕樣式'] 
                                 },
                                 {
-                                    id: 6, version: '3.5', date: '2025-08-21',
+                                    id: 7, version: '3.5', date: '2025-08-21',
                                     changes: [
                                         '功能修復：解決了大部分按鈕點擊無反應的問題。',
                                         '功能修復：「輩分關係」計算機的人名下拉選單可以正常載入。',
@@ -1121,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 7, version: '3.4', date: '2025-08-18',
+                                    id: 8, version: '3.4', date: '2025-08-18',
                                     changes: [
                                         'UI/UX：將「進階功能」改為更穩定的右側滑出面板。',
                                         'UI/UX：新增「篩選器」按鈕，可自由顯示或隱藏篩選條件。',
@@ -1133,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 8, version: '3.3', date: '2025-08-18',
+                                    id: 9, version: '3.3', date: '2025-08-18',
                                     changes: [
                                         '核心功能：實作「輩分關係圖」、「家族數據儀表板」、「重要紀念日提醒」、「列印模式」。',
                                         '核心功能：實作「家族時間軸」、「照片藝廊」、「資料匯出/備份(JSON)」、「地圖模式」。',
@@ -1142,14 +1172,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 9, version: '3.2', date: '2025-08-17',
+                                    id: 10, version: '3.2', date: '2025-08-17',
                                     changes: [
                                         '核心功能：修正了「祭祖祭拜」中的「獻上水果」、「焚燒金紙」等按鈕點擊後沒有動畫的問題。',
                                         '資料更新：根據您提供的大量清單，批次更新了數十位家族成員資料與其親屬關係。'
                                     ]
                                 },
                                 {
-                                    id: 10, version: '3.1 & earlier', date: '2025-08-16',
+                                    id: 11, version: '3.1 & earlier', date: '2025-08-16',
                                     changes: [
                                         '建立了基本的樹狀圖顯示結構。',
                                         '實現了成員資料的增、刪、改、查 (CRUD)。',
@@ -1162,7 +1192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 11, version: '3.0', date: '2025-08-15',
+                                    id: 12, version: '3.0', date: '2025-08-15',
                                     changes: [
                                         '重要更新：推出「輩分關係」計算機，可查詢任意兩位成員的親屬稱謂。',
                                         '功能新增：新增「JSON 備份匯出/匯入」功能，保障資料安全。',
@@ -1172,7 +1202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 12, version: '2.0', date: '2025-08-11',
+                                    id: 13, version: '2.0', date: '2025-08-11',
                                     changes: [
                                         '重要更新：引入編輯者與訪客兩種權限模式。',
                                         '功能新增：編輯者登入後，可看見「新增成員」、「修改資料」、「刪除成員」按鈕。',
@@ -1182,7 +1212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 13, version: '1.0', date: '2025-08-10',
+                                    id: 14, version: '1.0', date: '2025-08-10',
                                     changes: [
                                         '初始版本發布。',
                                         '核心功能：實現了基本的樹狀圖顯示家族成員及其連接線。',
@@ -1192,7 +1222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 }
                             ],
-                            version: '4.1.0.0'
+                            version: '4.2.0.0'
                             //以上 當前 版本資訊
             }
         }], 
@@ -1504,6 +1534,7 @@ document.addEventListener('DOMContentLoaded', () => {
         crop: document.getElementById('cropModal'),
         donate: document.getElementById('donateModal'), // <--- 加入這一行
         profile: document.getElementById('profileModal'), // <--- 加入這一行
+        announcement: document.getElementById('announcementModal') // <--- 加入這一行
     };
     const form = document.getElementById('person-form');
     const treeContainer = document.querySelector('.tree-container');
@@ -2920,13 +2951,27 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         }
     }
     
+
     function renderAnnouncements() {
-        const list = document.getElementById('notification-list');
-        list.innerHTML = '';
-        historyStack[currentHistoryIndex].data.announcements.forEach(item => {
-            list.innerHTML += `<li>${item.content}<span class="noti-time">${item.date}</span></li>`;
-        });
-    }
+        const list = document.getElementById('notification-list');
+        list.innerHTML = '<li>載入中...</li>';
+
+        // 使用 onSnapshot 來即時監聽公告變化
+        db.collection("announcements").orderBy("timestamp", "desc").onSnapshot((querySnapshot) => {
+            if (querySnapshot.empty) {
+                list.innerHTML = '<li>目前沒有任何公告。</li>';
+                return;
+            }
+            list.innerHTML = '';
+            querySnapshot.forEach(doc => {
+                const item = doc.data();
+                list.innerHTML += `<li>${item.content}<span class="noti-time">${item.date}</span></li>`;
+            });
+        }, (error) => {
+            console.error("讀取雲端公告失敗:", error);
+            list.innerHTML = '<li>無法載入公告。</li>';
+        });
+    }
 
     function renderComments() {
         const list = document.getElementById('comment-list');
@@ -3328,6 +3373,79 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         } catch (error) {
             console.error("更新個人資料失敗:", error);
             alert("更新個人資料時發生錯誤。");
+        }
+    });
+
+
+    // --- v4.2 Online Announcement Management ---
+    const manageAnnouncementsBtn = document.getElementById('manage-announcements-btn');
+    const announcementModal = document.getElementById('announcementModal');
+    const announcementListAdmin = document.getElementById('announcement-list-admin');
+    const addAnnouncementForm = document.getElementById('add-announcement-form');
+    const announcementContentInput = document.getElementById('announcement-content');
+
+    // 點擊「公告管理」按鈕
+    manageAnnouncementsBtn.addEventListener('click', () => {
+        renderAnnouncementsForAdmin(); // 載入並顯示目前所有公告
+        announcementModal.style.display = 'block';
+    });
+
+    // 在管理視窗中顯示公告列表 (包含刪除按鈕)
+    async function renderAnnouncementsForAdmin() {
+        announcementListAdmin.innerHTML = '<li>載入中...</li>';
+        const querySnapshot = await db.collection("announcements").orderBy("timestamp", "desc").get();
+        announcementListAdmin.innerHTML = '';
+        if (querySnapshot.empty) {
+            announcementListAdmin.innerHTML = '<li>尚無公告。</li>';
+        } else {
+            querySnapshot.forEach(doc => {
+                const item = doc.data();
+                const li = document.createElement('li');
+                li.style.display = 'flex';
+                li.style.justifyContent = 'space-between';
+                li.innerHTML = `<span>${item.content} <small>(${item.date})</small></span>
+                             <button class="delete-announcement-btn" data-id="${doc.id}" style="color:red; background:none; border:none; cursor:pointer;">刪除</button>`;
+                announcementListAdmin.appendChild(li);
+            });
+        }
+    }
+
+    // 提交新公告的表單
+    addAnnouncementForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const content = announcementContentInput.value.trim();
+        if (!content) return;
+
+        const today = new Date();
+        const dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        try {
+            await db.collection("announcements").add({
+                content: content,
+                date: dateString,
+                timestamp: today
+            });
+            announcementContentInput.value = ''; // 清空輸入框
+            renderAnnouncementsForAdmin(); // 重新整理列表
+        } catch (error) {
+            console.error("新增公告失敗:", error);
+            alert('新增公告失敗！');
+        }
+    });
+
+    // 處理刪除按鈕的點擊
+    announcementListAdmin.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('delete-announcement-btn')) {
+            const docId = e.target.dataset.id;
+            if (confirm('確定要刪除這則公告嗎？')) {
+                try {
+                    await db.collection("announcements").doc(docId).delete();
+                    renderAnnouncementsForAdmin(); // 重新整理列表
+                } catch (error) {
+                    console.error("刪除公告失敗:", error);
+                    alert('刪除公告失敗！');
+                }
+            }
         }
     });
 

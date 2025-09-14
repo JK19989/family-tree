@@ -27,34 +27,11 @@
     .header-btn { padding: 8px 15px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; border-radius: 5px; background-color: white; margin: 0 5px; white-space: nowrap; }
     .header-btn.small-blue { background-color: var(--primary-action-color); color: white; padding: 5px 10px; font-size: 14px; border-color: var(--primary-action-color); }
     .header-btn.small-red { background-color: var(--danger-action-color); color: white; padding: 5px 10px; font-size: 14px; border-color: var(--danger-action-color); }
-    /* 需求 #2: 按鈕美化並縮小 */
-    .header-btn-major, .header-btn-editor {
-        padding: 6px 12px;
-        font-size: 14px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.07);
-        transition: all 0.2s ease-in-out;
-    }
-    .header-btn-major {
-        background-color: var(--btn-major-bg);
-        border: 1px solid var(--btn-major-border);
-    }
-    .header-btn-major:hover {
-        background-color: var(--btn-major-hover-bg);
-        border-color: #777;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .header-btn-editor {
-        background-color: var(--btn-editor-bg);
-        color: white;
-        border: 1px solid var(--btn-editor-border);
-    }
-    .header-btn-editor:hover {
-        background-color: #5a6268;
-        border-color: #495057;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
+    .header-btn-major, .header-btn-editor { padding: 6px 12px; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.07); transition: all 0.2s ease-in-out; }
+    .header-btn-major { background-color: var(--btn-major-bg); border: 1px solid var(--btn-major-border); }
+    .header-btn-major:hover { background-color: var(--btn-major-hover-bg); border-color: #777; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .header-btn-editor { background-color: var(--btn-editor-bg); color: white; border: 1px solid var(--btn-editor-border); }
+    .header-btn-editor:hover { background-color: #5a6268; border-color: #495057; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
     #status-indicator { font-weight: bold; }
     #status-indicator.visitor { color: #6c757d; }
     #status-indicator.editor { color: #28a745; }
@@ -85,7 +62,6 @@
     .node-buttons { display: flex; align-items: center; justify-content: center; }
     .node-btn { font-family: sans-serif; font-size: 16px; font-weight: bold; width: 24px; height: 24px; line-height: 22px; border-radius: 50%; border: 1px solid #ccc; background-color: var(--button-bg); cursor: pointer; margin-left: 4px; transition: background-color 0.2s, transform 0.1s ease; }
     .node-btn:hover { background-color: var(--button-hover-bg); }
-    /* 需求 #4: +/- 按鈕還原舊版樣式 */
     .li-toggle-btn { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); z-index: 5; width: 44px; height: 44px; line-height: 42px; padding: 0; background-color: rgba(255, 255, 255, 0.5); border-radius: 50%; }
     .toggle-btn { color: #3498db; } .add-btn { color: #28a745; } .edit-btn { color: #ffc107; } .delete-btn { color: var(--danger-action-color); } .add-spouse-node-btn { color: #fd7e14; }
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); animation: fadeIn 0.3s; }
@@ -94,7 +70,6 @@
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; } .form-grid .full-width { grid-column: 1 / -1; }
     .form-grid label { font-weight: bold; margin-bottom: 5px; display: block; }
     .form-grid input, .form-grid select, .form-grid textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    /* 需求 #3: 日期輸入框與日曆按鈕 */
     .date-input-container { position: relative; display: flex; align-items: center; }
     .date-input-container input { flex-grow: 1; }
     .calendar-toggle-btn { position: absolute; right: 1px; top: 50%; transform: translateY(-50%); border: none; background: #f0f0f0; height: calc(100% - 2px); width: 34px; cursor: pointer; border-radius: 0 4px 4px 0; color: #666; font-size: 16px; display: flex; align-items: center; justify-content: center; }
@@ -142,7 +117,6 @@
     .dropdown:hover .dropdown-content { display: block; }
     #image-preview { max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 5px; }
     #crop-image-preview { display: block; max-width: 100%; }
-    #worship-view { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--worship-bg); z-index: 2000; transition: background-color 0.2s; }
     .worship-container { display: flex; height: 100%; }
     .deceased-list { position: fixed; right: 0; top: 0; height: 100%; width: 280px; background: rgba(0,0,0,0.08); padding: 15px; box-sizing: border-box; transform: translateX(calc(100% - 30px)); transition: transform 0.4s ease-in-out; z-index: 2001; }
     .deceased-list:hover { transform: translateX(0); }
@@ -151,52 +125,7 @@
     .deceased-list li { margin-bottom: 5px; cursor: pointer; padding: 5px; border-radius: 4px; }
     .deceased-list li:hover { background-color: rgba(0,0,0,0.1); }
     .animation-area { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-    #worship-details { display: none; align-items: center; justify-content: center; text-align: left; max-width: 70%; background: rgba(255,255,255,0.5); padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    #worship-image {
-            width: 150px; height: 150px;
-            border-radius: 5px; margin-right: 20px;
-            object-fit: cover;
-            /* 以下為新增樣式 */
-            background-color: #e0e0e0; /* 預設背景色 */
-            border: 2px dashed #bdbdbd; /* 虛線邊框，營造相框感 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #757575;
-        }
-        /* 當沒有照片時，顯示"暫無照片" */
-        #worship-image:not([src]) {
-            content: "暫無照片";
-        }
-        /* 當有照片時，隱藏文字並還原樣式 */
-        #worship-image[src] {
-            content: "";
-            border: 2px solid #ccc;
-        }
-        
-        #worship-bio {
-            font-size: 1.1em; color: #333;
-            /* 以下為修改/新增樣式 */
-            width: 400px; /* 固定寬度 */
-            height: 150px; /* 固定高度，與照片同高 */
-            overflow-y: auto;
-            background-color: #f5f5f5;
-            border: 1px solid #ddd;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
-    .worship-controls {
-        position: absolute; bottom: 20px;
-        left: 50%; transform: translateX(-50%);
-        text-align: center; display: flex;
-        gap: 10px;
-        /* 以下為新增樣式 */
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 95%; /* 讓容器寬一點 */
-    }
-    
+    .worship-controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 95%; }
     .offering { position: absolute; opacity: 0; font-size: 5rem; user-select: none; }
     @keyframes offer-fruit { 0% { opacity: 0; transform: translateY(50px) scale(0.5); } 50% { opacity: 1; transform: translateY(-20px) scale(1.1); } 100% { opacity: 0; transform: translateY(-100px) scale(0.5); } }
     @keyframes burn-paper-new { 0% { opacity: 1; transform: translateY(60px) scale(1.2); filter: brightness(1.2) saturate(1); } 50% { opacity: 0.8; transform: translateY(-50px) scale(1.5); filter: brightness(2) saturate(5) hue-rotate(-20deg); } 90% { opacity: 0.5; filter: brightness(1) saturate(1); } 100% { opacity: 0; transform: translateY(-180px) scale(0.2) rotate(720deg); filter: brightness(0.5); } }
@@ -265,12 +194,33 @@
     #notification-bell-container { position: fixed; top: 15px; right: 120px; z-index: 998; }
     #notification-bell-btn { background: none; border: none; font-size: 24px; cursor: pointer; position: relative; }
     #notification-dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; background-color: var(--danger-action-color); border-radius: 50%; display: none; }
-    #notification-panel { display: none; position: absolute; top: 40px; right: 0; width: 300px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #ddd; max-height: 400px; overflow-y: auto; z-index: 999; }
+    #notification-panel {
+        display: none;
+        position: absolute;
+        top: 40px;
+        right: 0;
+        width: 300px;
+        /* --- 以下是修改/新增的樣式 --- */
+        background-color: rgba(255, 255, 255, 0.85); /* 85% 不透明度的白色背景 */
+        backdrop-filter: blur(8px); /* 毛玻璃效果 */
+        -webkit-backdrop-filter: blur(8px); /* 針對 Safari 瀏覽器的相容性 */
+        /* --- 以上是修改/新增的樣式 --- */
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        max-height: 400px;
+        overflow-y: auto;
+        z-index: 999;
+    }
     #notification-panel h4 { margin: 15px 15px 10px; }
     #notification-panel ul { list-style: none; padding: 0; margin: 0; }
     #notification-panel li { padding: 10px 15px; border-bottom: 1px solid #eee; }
     #notification-panel li:last-child { border-bottom: none; }
     #notification-panel .noti-time { font-size: 0.8em; color: #888; display: block; margin-top: 5px; }
+    /* v4.0 暫時隱藏失效的 Undo/Redo 按鈕 */
+    .history-nav-buttons {
+        display: none;
+    }
 
     @media (max-width: 768px) {
         body { padding: 5px; }
@@ -414,12 +364,7 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-
-    /* v4.0 暫時隱藏失效的 Undo/Redo 按鈕 */
-    .history-nav-buttons {
-        display: none;
-    }
-
+</style>
 </style>
 </head>
 <body>
@@ -461,6 +406,7 @@
         <button id="open-comment-modal-btn" class="header-btn header-btn-major">💬 留言板</button>
         <button id="show-help-btn" class="header-btn small-blue" title="查看功能說明">功能說明</button>
         <button id="contact-btn" class="header-btn small-blue" title="聯絡資訊">聯絡</button>
+        <button id="show-donate-modal-btn" class="header-btn header-btn-major" style="color: #c88f0e; border-color: #c88f0e;">❤️ 贊助專案</button>
     </div>
     <div class="filter-zoom-section">
         <button id="toggle-filter-panel-btn" class="header-btn header-btn-major">🔍 篩選器</button>
@@ -640,6 +586,32 @@
 <div id="changelogModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>版本更新歷史</h2><button id="add-changelog-btn" class="header-btn small-blue editor-only">新增條目</button><ul id="changelog-list"></ul></div></div>
 <div id="changelogFormModal" class="modal"><div class="modal-content" style="max-width: 500px;"><span class="close-btn">&times;</span><h2 id="changelog-form-title"></h2><form id="changelog-form"><input type="hidden" id="changelogId"><div class="form-grid"><div class="full-width"><label for="changelog-version">版本號:</label><input type="text" id="changelog-version" placeholder="例如: 3.7.1" required></div><div class="full-width"><label for="changelog-date">日期:</label><input type="date" id="changelog-date" required></div><div class="full-width"><label for="changelog-changes">更新內容 (每行一項):</label><textarea id="changelog-changes" rows="5" required></textarea></div></div><button type="submit" class="account-form-btn">儲存</button></form></div></div>
 <div id="cropModal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>裁切照片</h2><div><img id="crop-image-preview" src=""></div><div style="text-align: center; margin-top: 15px;"><button id="crop-confirm-btn" class="header-btn small-blue">確定裁切</button></div></div></div>
+<div id="donateModal" class="modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <span class="close-btn">&times;</span>
+        <div id="donate-step1">
+            <h2>贊助本專案</h2>
+            <p>您的支持是讓這個家譜持續維護與進步的最大動力！</p>
+            <div class="form-grid">
+                <div class="full-width">
+                    <label for="donator-name">您的姓名/稱謂:</label>
+                    <input type="text" id="donator-name" required>
+                </div>
+                <div class="full-width">
+                    <label for="donate-amount">贊助金額 (NT$):</label>
+                    <input type="number" id="donate-amount" required>
+                </div>
+            </div>
+            <button id="confirm-donate-btn" class="header-btn small-blue" style="margin-top: 20px;">確認贊助並前往付款</button>
+        </div>
+        <div id="donate-step2" style="display: none;">
+            <h2>感謝您的贊助！</h2>
+            <p>請使用街口支付 App 掃描以下 QR Code 完成付款。</p>
+            <img id="jko-qrcode" src="" style="max-width: 100%; border: 1px solid #ddd; padding: 5px;">
+            <p style="margin-top: 15px;">手機用戶請 <a id="jko-deeplink" href="">點此直接開啟 App 付款</a></p>
+        </div>
+    </div>
+</div>
 <div id="datepicker-container"></div>
 
 <div id="advanced-panel" class="side-panel">
@@ -695,6 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeDatepicker = null;
     let isMuted = false; // 【新增這一行】
     let worshipCooldown = false; // 【新增這一行】
+    let notificationTimeout; // 【新增這一行】
 
     // --- Debug Logging Function ---
     function logDebug(...args) {
@@ -1061,14 +1034,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 comments: [
                     { id: Date.now(), author: '系統管理員', timestamp: new Date().toISOString(), content: '歡迎來到家族留言板！'},
                 ],
+                //小鈴鐺 資料
                 announcements: [
+                    { id: 2, date: '2025-09-14', content: 'v4.1 版已上線！新增「贊助專案」功能，感謝您的支持！'},
                     { id: 1, date: '2025-08-27', content: '家譜系統 v3.7 已上線，新增獨立登入頁面並修正多項功能，詳情請見版本更新資訊。'},
                 ],
 
                 //以下 版本資訊
                 changelog: [
+                                 {
+                                    id: Date.now(), version: '4.1', date: '2025-09-14',
+                                    changes: [
+                                        '功能新增：加入「榮譽制」贊助系統。',
+                                        '功能新增：點擊贊助按鈕可記錄贊助者資訊至雲端資料庫。',
+                                        '功能新增：整合街口支付，電腦版顯示 QR Code，手機版支援 Deep Link 直接開啟 App。',
+                                        'UI/UX 優化：「最新公告」(小鈴鐺) 面板改為半透明毛玻璃質感。',
+                                        'UI/UX 優化：「最新公告」面板新增自動消失與點擊外部關閉功能。'
+                                    ]
+                                },
+                                { 
+                                    id: 1, version: '4.0', date: '2025-09-13', 
+                                    changes: [
+                                        '【重大更新】登入系統完全重構，改為使用 Google Firebase Authentication 進行雲端驗證。',
+                                        '安全性提升：使用者帳號密碼不再儲存於前端檔案中，改由 Firebase 加密儲存與管理。',
+                                        '後端整合：login.html 與 auth.js 已成功整合 Firebase SDK，實現雲端登入功能。'
+                                    ] 
+                                },
                                 {
-                                    id: Date.now(), version: '3.9', date: '2025-09-11', 
+                                    id: 2, version: '3.9', date: '2025-09-11', 
                                     changes: [
                                         '【重大更新】引入 Google Firebase 後端服務，為即時同步做準備。',
                                         '建立雲端資料庫：啟用 Firestore Database 作為新的中央資料庫。',
@@ -1078,7 +1071,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ] 
                                 },
                                 {
-                                    id: 1, version: '3.8', date: '2025-09-11', 
+                                    id: 3, version: '3.8', date: '2025-09-11', 
                                     changes: [
                                         '【重要】重寫輩分計算底層邏輯，大幅提升準確性',
                                         '為「祭拜」功能加入背景音效與靜音按鈕',
@@ -1089,15 +1082,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ] 
                                 },
                                 { 
-                                    id: 2, version: '3.7', date: '2025-08-27', 
+                                    id: 4, version: '3.7', date: '2025-08-27', 
                                     changes: ['新增獨立登入頁面與對應邏輯', '修正多項輩分關係計算錯誤', '實作可互動的日曆選擇器', '調整主要按鈕外觀並縮小尺寸', '還原 +/- 收合按鈕為舊版樣式', '新增多組預設使用者帳號', '全局更正「峯」字', '更新成員墓地資訊'] 
                                 },
                                 { 
-                                    id: 3, version: '3.6', date: '2025-08-21', 
+                                    id: 5, version: '3.6', date: '2025-08-21', 
                                     changes: ['實作「家族時間軸」與「照片藝廊」功能', '實作「重要紀念日」功能', '美化多組功能按鈕樣式'] 
                                 },
                                 {
-                                    id: 4, version: '3.5', date: '2025-08-21',
+                                    id: 6, version: '3.5', date: '2025-08-21',
                                     changes: [
                                         '功能修復：解決了大部分按鈕點擊無反應的問題。',
                                         '功能修復：「輩分關係」計算機的人名下拉選單可以正常載入。',
@@ -1110,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 5, version: '3.4', date: '2025-08-18',
+                                    id: 7, version: '3.4', date: '2025-08-18',
                                     changes: [
                                         'UI/UX：將「進階功能」改為更穩定的右側滑出面板。',
                                         'UI/UX：新增「篩選器」按鈕，可自由顯示或隱藏篩選條件。',
@@ -1122,7 +1115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 6, version: '3.3', date: '2025-08-18',
+                                    id: 8, version: '3.3', date: '2025-08-18',
                                     changes: [
                                         '核心功能：實作「輩分關係圖」、「家族數據儀表板」、「重要紀念日提醒」、「列印模式」。',
                                         '核心功能：實作「家族時間軸」、「照片藝廊」、「資料匯出/備份(JSON)」、「地圖模式」。',
@@ -1131,14 +1124,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 7, version: '3.2', date: '2025-08-17',
+                                    id: 9, version: '3.2', date: '2025-08-17',
                                     changes: [
                                         '核心功能：修正了「祭祖祭拜」中的「獻上水果」、「焚燒金紙」等按鈕點擊後沒有動畫的問題。',
                                         '資料更新：根據您提供的大量清單，批次更新了數十位家族成員資料與其親屬關係。'
                                     ]
                                 },
                                 {
-                                    id: 8, version: '3.1 & earlier', date: '2025-08-16',
+                                    id: 10, version: '3.1 & earlier', date: '2025-08-16',
                                     changes: [
                                         '建立了基本的樹狀圖顯示結構。',
                                         '實現了成員資料的增、刪、改、查 (CRUD)。',
@@ -1151,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 9, version: '3.0', date: '2025-08-15',
+                                    id: 11, version: '3.0', date: '2025-08-15',
                                     changes: [
                                         '重要更新：推出「輩分關係」計算機，可查詢任意兩位成員的親屬稱謂。',
                                         '功能新增：新增「JSON 備份匯出/匯入」功能，保障資料安全。',
@@ -1161,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 10, version: '2.0', date: '2025-08-11',
+                                    id: 12, version: '2.0', date: '2025-08-11',
                                     changes: [
                                         '重要更新：引入編輯者與訪客兩種權限模式。',
                                         '功能新增：編輯者登入後，可看見「新增成員」、「修改資料」、「刪除成員」按鈕。',
@@ -1171,7 +1164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 },
                                 {
-                                    id: 11, version: '1.0', date: '2025-08-10',
+                                    id: 13, version: '1.0', date: '2025-08-10',
                                     changes: [
                                         '初始版本發布。',
                                         '核心功能：實現了基本的樹狀圖顯示家族成員及其連接線。',
@@ -1181,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ]
                                 }
                             ],
-                            version: '4.0.0.0'
+                            version: '4.1.0.0'
                             //以上 當前 版本資訊
             }
         }], 
@@ -1195,9 +1188,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupRealtimeListener() {
         console.log("開始監聽雲端資料...");
-        const membersCollectionRef = db.collection("members");
-
-        membersCollectionRef.onSnapshot((querySnapshot) => {
+        // v8 語法：直接使用全域的 db 物件
+        db.collection("members").onSnapshot((querySnapshot) => {
             console.log("偵測到雲端資料變動！正在更新畫面...");
             const members = [];
             querySnapshot.forEach(doc => {
@@ -1205,7 +1197,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const tree = buildTreeFromFlatData(members);
-            
             const cloudData = JSON.parse(JSON.stringify(defaultData.history[0].data));
             cloudData.tree = tree;
             
@@ -1230,11 +1221,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }, (error) => {
-            console.error("監聽 Firestore 資料失敗:", error);
+            console.error("監聽 Firestore 時發生嚴重錯誤:", error);
             alert("無法與雲端資料庫建立即時連線，請查看 Console。");
         });
     }
-    
+
 
     // 將 setupRealtimeListener 函式公開到全域，讓外面的 script 可以呼叫它
     window.setupRealtimeListener = setupRealtimeListener;
@@ -1493,6 +1484,7 @@ document.addEventListener('DOMContentLoaded', () => {
         changelog: document.getElementById('changelogModal'),
         changelogForm: document.getElementById('changelogFormModal'),
         crop: document.getElementById('cropModal'),
+        donate: document.getElementById('donateModal'), // <--- 加入這一行
     };
     const form = document.getElementById('person-form');
     const treeContainer = document.querySelector('.tree-container');
@@ -1542,11 +1534,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 document.getElementById('confirm-ok-btn').onclick = async () => {
                     try {
-                        const { doc, deleteDoc } = window.firestoreTools;
-                        await deleteDoc(doc(window.db, "members", personId));
+                        await db.collection("members").doc(personId).delete();
                         console.log("成員已從雲端刪除:", personId);
                         modals.confirm.style.display = 'none';
-                        // 同樣地，監聽器會自動更新畫面
                     } catch (error) {
                         console.error("從 Firestore 刪除失敗:", error);
                         alert("刪除失敗，請查看 Console 錯誤訊息。");
@@ -1602,14 +1592,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const { doc, setDoc } = window.firestoreTools;
 
         const personId = document.getElementById('personId').value;
-        const parentId = document.getElementById('parentId').value;
-        const spouseOfId = document.getElementById('formModal').dataset.spouseOfId;
-        
         const formData = {
             name: document.getElementById('name').value, 
             branchName: document.getElementById('branchName').value,
@@ -1627,26 +1615,24 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            if (personId) { // --- 這是「修改」現有成員 ---
+            if (personId) { // --- 修改現有成員 ---
                 formData.id = personId;
-                const docRef = doc(window.db, "members", personId);
-                await setDoc(docRef, formData, { merge: true }); // merge: true 表示只更新有變動的欄位
+                await db.collection("members").doc(personId).set(formData, { merge: true });
                 console.log("成員資料已更新至雲端:", personId);
-            } else { // --- 這是「新增」成員 ---
+            } else { // --- 新增成員 ---
                 const newId = Date.now().toString();
                 formData.id = newId;
-                const docRef = doc(window.db, "members", newId);
-                await setDoc(docRef, formData);
+                await db.collection("members").doc(newId).set(formData);
                 console.log("新成員已建立於雲端:", newId);
             }
-            modals.form.style.display = 'none'; // 關閉表單
-            // 我們不再需要手動呼叫 renderTree()，監聽器會自動處理！
+            modals.form.style.display = 'none';
         } catch (error) {
             console.error("寫入 Firestore 失敗:", error);
             alert("儲存失敗，請查看 Console 錯誤訊息。");
         }
     });
-    
+
+
     document.getElementById('image-upload').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -2970,11 +2956,38 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         modals.comment.style.display = 'block';
     });
     
-    document.getElementById('notification-bell-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        const panel = document.getElementById('notification-panel');
-        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    // --- START: v4.1 小鈴鐺功能強化 ---
+    const bellBtn = document.getElementById('notification-bell-btn');
+    const notificationPanel = document.getElementById('notification-panel');
+
+    bellBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 防止點擊事件冒泡到 document
+
+        const isVisible = notificationPanel.style.display === 'block';
+
+        // 清除上一個計時器，避免重複觸發
+        clearTimeout(notificationTimeout);
+
+        if (isVisible) {
+            notificationPanel.style.display = 'none';
+        } else {
+            notificationPanel.style.display = 'block';
+            // 設定 7 秒後自動關閉
+            notificationTimeout = setTimeout(() => {
+                notificationPanel.style.display = 'none';
+            }, 7000);
+        }
     });
+
+    // 新增：監聽整個頁面的點擊事件，用來關閉面板
+    document.addEventListener('click', (e) => {
+        // 如果面板是可見的，並且點擊的目標不是面板本身，也不是鈴鐺按鈕
+        if (notificationPanel.style.display === 'block' && !notificationPanel.contains(e.target) && !bellBtn.contains(e.target)) {
+            notificationPanel.style.display = 'none';
+            clearTimeout(notificationTimeout); // 同時清除計時器
+        }
+    });
+    // --- END: v4.1 小鈴鐺功能強化 ---
     
     document.getElementById('show-changelog-btn').addEventListener('click', () => {
         renderChangelog();
@@ -3186,6 +3199,50 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         document.getElementById('undo-btn').disabled = (currentHistoryIndex <= 0);
         document.getElementById('redo-btn').disabled = (currentHistoryIndex >= historyStack.length - 1);
     }
+
+
+    // --- v4.1 Donate Feature ---
+    const donateModal = document.getElementById('donateModal');
+    const jkoPhoneNumber = '903300867';
+    const jkoQrCodeUrl = 'https://github.com/JK19989/family-tree/blob/dist/images/jkopay_qr.png?raw=true';
+
+    document.getElementById('show-donate-modal-btn').addEventListener('click', () => {
+        document.getElementById('donate-step1').style.display = 'block';
+        document.getElementById('donate-step2').style.display = 'none';
+        donateModal.style.display = 'block';
+    });
+
+    document.getElementById('confirm-donate-btn').addEventListener('click', async () => {
+        const name = document.getElementById('donator-name').value.trim();
+        const amount = document.getElementById('donate-amount').value;
+
+        if (!name || !amount || amount <= 0) {
+            alert('請輸入您的姓名/稱謂與正確的金額！');
+            return;
+        }
+
+        try {
+            // v8 語法：使用 .add() 來讓 Firestore 自動產生 ID
+            const docRef = await db.collection("donations").add({
+                donator: name,
+                amount: Number(amount),
+                timestamp: new Date(),
+                status: 'pending'
+            });
+
+            console.log('贊助紀錄已儲存:', docRef.id);
+
+            document.getElementById('jko-qrcode').src = jkoQrCodeUrl;
+            document.getElementById('jko-deeplink').href = `jkos://transfer?jkoacn=${jkoPhoneNumber}&amount=${amount}&note=贊助李氏家族家譜`;
+            document.getElementById('donate-step1').style.display = 'none';
+            document.getElementById('donate-step2').style.display = 'block';
+
+        } catch (error) {
+            console.error("儲存贊助紀錄失敗:", error);
+            alert("無法儲存贊助紀錄，請稍後再試。");
+        }
+    });
+
 
     // 啟動程式
     initialize();

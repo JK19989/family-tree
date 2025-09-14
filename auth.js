@@ -1,83 +1,64 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 確認 login.html 裡的 Firebase Auth 物件已經準備好
+    if (!window.firebaseAuth) {
+        console.error("Firebase Auth SDK 尚未載入！請檢查 login.html 中的 script 標籤。");
+        document.getElementById('login-error').textContent = '登入服務載入失敗，請重新整理頁面。';
+        return;
+    }
+
+    const auth = window.firebaseAuth;
     const loginForm = document.getElementById('login-form');
     const errorMessageDiv = document.getElementById('login-error');
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        errorMessageDiv.textContent = ''; // 清除舊的錯誤訊息
+        errorMessageDiv.textContent = ''; 
 
-        const username = document.getElementById('username').value;
+        // Firebase Auth 使用 Email 作為帳號
+        const email = document.getElementById('username').value; 
         const password = document.getElementById('password').value;
 
         try {
-            // 從主頁讀取資料來驗證
-            const users = await fetchUsersFromMainPage();
+            // 使用 Firebase 的 signInWithEmailAndPassword 函式進行登入
+            const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            const user = userCredential.user;
             
-            const foundUser = users.find(u => u.user === username && u.pass === password);
+            console.log("Firebase 登入成功:", user.email);
 
-            if (foundUser) {
-                // 登入成功
-                const isAdminUser = ['admin', 'root'].includes(username);
-                const isSysAdminUser = username === 'root';
+            // 根據登入的 email 來判斷是否為管理員
+            // 記得要去 Firebase 後台建立對應的帳號
+            //以下isAdminUser 是管理員，isAdminUser 是工程管理員
+            const isAdminUser = ['admin@family.com', 'root@family.com', 'test@family.com'].includes(email);
+            const isSysAdminUser = email === 'root@family.com';
 
-                const authData = {
-                    isLoggedIn: true,
-                    displayName: foundUser.displayName,
-                    username: foundUser.user,
-                    isAdmin: isAdminUser,
-                    isSysAdmin: isSysAdminUser
-                };
+            const authData = {
+                isLoggedIn: true,
+                displayName: user.displayName || user.email, // 優先使用顯示名稱，否則用 email
+                username: user.email,
+                isAdmin: isAdminUser,
+                isSysAdmin: isSysAdminUser
+            };
 
-                // 使用 localStorage 儲存登入狀態
-                localStorage.setItem('authStatus', JSON.stringify(authData));
-                
-                // 跳轉到主頁
-                window.location.href = 'index.html';
+            // 使用 localStorage 儲存登入狀態
+            localStorage.setItem('authStatus', JSON.stringify(authData));
+            
+            // 跳轉到主頁
+            window.location.href = 'index.html';
 
-            } else {
-                // 登入失敗
-                errorMessageDiv.textContent = '帳號或密碼錯誤！';
-            }
         } catch (error) {
-            console.error('讀取使用者資料時發生錯誤:', error);
-            errorMessageDiv.textContent = '無法驗證，請確認主檔案是否正常。';
+            console.error('Firebase 登入失敗:', error);
+            switch (error.code) {
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    errorMessageDiv.textContent = '帳號或密碼錯誤！';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessageDiv.textContent = '帳號格式不正確。';
+                    break;
+                default:
+                    errorMessageDiv.textContent = '登入時發生未知錯誤。';
+            }
         }
     });
-
-    // 這個函式會去抓取 index.html 的內容，並解析出裡面的使用者資料
-    async function fetchUsersFromMainPage() {
-        try {
-            const response = await fetch('index.html');
-            if (!response.ok) {
-                throw new Error(`無法載入 index.html, 狀態: ${response.status}`);
-            }
-            const htmlText = await response.text();
-            
-            // 使用 DOMParser 來解析 HTML 字串
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlText, 'text/html');
-            
-            // 找到儲存資料的 script 標籤
-            const dataScript = doc.getElementById('family-data');
-            
-            if (!dataScript || !dataScript.textContent.trim()) {
-                 // 如果找不到嵌入資料，就從預設資料結構中拿
-                console.warn("在 index.html 中找不到嵌入的 family-data，將使用程式碼中的預設使用者。");
-                return [
-                    {user: 'root', pass: 'root', displayName: '工程管理員'},
-                    {user: 'admin', pass: 'password', displayName: '最高管理員'},
-                    {user: '0', pass: '0', displayName: '測試人員'}
-                ];
-            }
-
-            const parsedData = JSON.parse(dataScript.textContent);
-            
-            // 返回最新一筆歷史紀錄中的使用者列表
-            return parsedData.history[parsedData.currentIndex].data.users;
-
-        } catch (e) {
-            console.error("解析 index.html 中的使用者資料失敗:", e);
-            throw e;
-        }
-    }
 });

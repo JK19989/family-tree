@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>註冊家族成員帳號</title>
+    <link rel="stylesheet" href="style.css"> </head>
+<body>
+    <div class="login-container">
+        <h1>註冊新帳號</h1>
+        <p>建立您的專屬帳號以編輯家譜</p>
+        <form id="register-form">
+            <div class="input-group">
+                <label for="displayName">您的姓名/稱謂</label>
+                <input type="text" id="displayName" name="displayName" required>
+            </div>
+            <div class="input-group">
+                <label for="email">Email (將作為您的登入帳號)</label>
+                <input type="email" id="email" name="email" required>
+                <div id="domain-buttons" class="domain-buttons-container">
+                    <button type="button" data-domain="@gmail.com">@gmail.com</button>
+                    <button type="button" data-domain="@family.com">@family.com</button>
+                    <button type="button" data-domain="@yahoo.com.tw">@yahoo.com.tw</button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="password">密碼 (至少6位數)</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="input-group">
+                <label for="confirmPassword">確認密碼</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+            </div>
+            <button type="submit" class="btn-login">註冊</button>
+        </form>
+        <div id="register-error" class="error-message"></div>
+        <div class="register-link"> <p>已經有帳號了？ <a href="login.html">點此登入</a></p>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // 您的 Firebase 專案設定 (請務必換成您自己的！)
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+        apiKey: "AIzaSyBC6OUlxdibSn2LwckWHNE2CRqyNCn2sAc",
+        authDomain: "family-tree-8bcb1.firebaseapp.com",
+        projectId: "family-tree-8bcb1",
+        storageBucket: "family-tree-8bcb1.firebasestorage.app",
+        messagingSenderId: "1022926104375",
+        appId: "1:1022926104375:web:440e204c9a168bed74dcb2",
+        measurementId: "G-VDZ1F294LC"
+        };
+
+        // 初始化 Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // 將 auth 功能附加到 window 物件，讓 register.js 可以使用
+        window.firebaseAuth = auth;
+    </script>
+
+    <script src="register.js"></script>
+</body>
+</html>

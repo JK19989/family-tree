@@ -365,7 +365,7 @@
         100% { transform: rotate(360deg); }
     }
 </style>
-</style>
+
 </head>
 <body>
 
@@ -394,6 +394,7 @@
     <div class="user-status-section">
         <span id="user-view">
             歡迎, <span id="user-display-name"></span>!
+            <button id="profile-btn" class="header-btn small-blue" title="修改我的資料">我的資料</button>
             <button id="logout-btn" class="header-btn small-red" title="登出">登出</button>
         </span>
         <span id="guest-view">
@@ -612,6 +613,22 @@
         </div>
     </div>
 </div>
+
+<div id="profileModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-btn">&times;</span>
+        <h2>編輯個人資料</h2>
+        <p>在這裡更新您的顯示名稱。</p>
+        <div class="form-grid">
+            <div class="full-width">
+                <label for="profile-displayName">顯示名稱:</label>
+                <input type="text" id="profile-displayName" required>
+            </div>
+            </div>
+        <button id="save-profile-btn" class="header-btn small-blue" style="margin-top: 20px;">儲存變更</button>
+    </div>
+</div>
+
 <div id="datepicker-container"></div>
 
 <div id="advanced-panel" class="side-panel">
@@ -635,6 +652,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -1485,6 +1503,7 @@ document.addEventListener('DOMContentLoaded', () => {
         changelogForm: document.getElementById('changelogFormModal'),
         crop: document.getElementById('cropModal'),
         donate: document.getElementById('donateModal'), // <--- 加入這一行
+        profile: document.getElementById('profileModal'), // <--- 加入這一行
     };
     const form = document.getElementById('person-form');
     const treeContainer = document.querySelector('.tree-container');
@@ -3240,6 +3259,75 @@ document.getElementById('worship-btn-fixed').addEventListener('click', () => {
         } catch (error) {
             console.error("儲存贊助紀錄失敗:", error);
             alert("無法儲存贊助紀錄，請稍後再試。");
+        }
+    });
+
+
+    // --- v4.2 User Profile Feature ---
+    const profileBtn = document.getElementById('profile-btn');
+    const profileModal = document.getElementById('profileModal');
+    const profileDisplayNameInput = document.getElementById('profile-displayName');
+    const saveProfileBtn = document.getElementById('save-profile-btn');
+
+    // 當「我的資料」按鈕被點擊
+    profileBtn.addEventListener('click', async () => {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            alert('請先登入！');
+            return;
+        }
+
+        try {
+            // 從 Firestore 的 users 集合中讀取目前使用者的資料
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                profileDisplayNameInput.value = userData.displayName || '';
+                profileModal.style.display = 'block';
+            } else {
+                alert('找不到您的個人資料檔案！可能是新註冊的帳號，請重新整理頁面後再試一次。');
+                console.error('Firestore user document not found for UID:', user.uid);
+            }
+        } catch (error) {
+            console.error("讀取個人資料失敗:", error);
+            alert("讀取個人資料時發生錯誤。");
+        }
+    });
+
+    // 當「儲存變更」按鈕被點擊
+    saveProfileBtn.addEventListener('click', async () => {
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+
+        const newDisplayName = profileDisplayNameInput.value.trim();
+        if (!newDisplayName) {
+            alert('顯示名稱不能為空！');
+            return;
+        }
+
+        try {
+            // 步驟 1: 更新 Firestore 資料庫中的 displayName
+            const userDocRef = db.collection('users').doc(user.uid);
+            await userDocRef.update({
+                displayName: newDisplayName
+            });
+            console.log("Firestore displayName updated.");
+
+            // 步驟 2: 更新 Firebase Authentication 中的 displayName
+            await user.updateProfile({
+                displayName: newDisplayName
+            });
+            console.log("Auth profile displayName updated.");
+            
+            // 步驟 3: 更新畫面右上角的歡迎訊息
+            document.getElementById('user-display-name').textContent = newDisplayName;
+
+            alert('個人資料更新成功！');
+            profileModal.style.display = 'none';
+
+        } catch (error) {
+            console.error("更新個人資料失敗:", error);
+            alert("更新個人資料時發生錯誤。");
         }
     });
 

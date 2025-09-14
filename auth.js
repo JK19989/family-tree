@@ -61,4 +61,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
+    // --- v4.2 忘記密碼功能 ---
+    const forgotPasswordLink = document.getElementById('forgot-password');
+    forgotPasswordLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        errorMessageDiv.textContent = '';
+
+        const email = document.getElementById('username').value;
+        if (!email) {
+            errorMessageDiv.textContent = '請先在帳號欄位輸入您的 Email，然後再點擊「忘記密碼」。';
+            return;
+        }
+
+        try {
+            await auth.sendPasswordResetEmail(email);
+            alert(`密碼重設信件已寄送到 ${email}！\n請檢查您的信箱（包含垃圾郵件匣），並依照信中指示重設密碼。`);
+        } catch (error) {
+            console.error("發送密碼重設信件失敗:", error);
+            errorMessageDiv.textContent = '無法發送密碼重設信件，請確認 Email 是否為已註冊的帳號。';
+        }
+    });
 });

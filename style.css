@@ -134,3 +134,38 @@ body {
 #mute-btn {
     width: 48px; /* 稍微加寬以容納 emoji */
 }
+
+/* v4.2 Register Link */
+.register-link {
+    margin-top: 20px;
+    font-size: 14px;
+}
+.register-link a {
+    color: #28a745;
+    text-decoration: none;
+    font-weight: bold;
+}
+.register-link a:hover {
+    text-decoration: underline;
+}
+
+/* v4.2 Email Domain Buttons */
+.domain-buttons-container {
+    display: flex;
+    flex-wrap: wrap; /* 在手機小畫面上會自動換行 */
+    gap: 6px;
+    margin-top: 6px;
+}
+.domain-buttons-container button {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 10px; /* 膠囊形狀 */
+    cursor: pointer;
+    color: #495057;
+    transition: background-color 0.2s;
+}
+.domain-buttons-container button:hover {
+    background-color: #dee2e6;
+}
